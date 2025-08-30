@@ -14,7 +14,7 @@ class AuthController extends Controller
         $request->validate([
             'name' => 'required|string|max:255',
             'email' => 'required|string|email|max:255|unique:users',
-            'password' => 'required|string|min:6|confirmed', // pakai password_confirmation
+            'password' => 'required|string|min:6|confirmed',
         ]);
 
         $user = User::create([
@@ -23,12 +23,7 @@ class AuthController extends Controller
             'password' => Hash::make($request->password),
         ]);
 
-        return response()->json(
-            [
-                'user' => $user,
-            ],
-            201,
-        );
+        return api_success(['user' => $user], 'pendaftaran berhasil');
     }
 
     public function login(Request $request)
@@ -41,21 +36,21 @@ class AuthController extends Controller
         $user = User::where('email', $request->email)->first();
 
         if (!$user || !Hash::check($request->password, $user->password)) {
-            return response()->json(['message' => 'Invalid credentials'], 401);
+            return api_error('email atau password salah');
         }
 
         $token = $user->createToken('mobile-app-token')->plainTextToken;
 
-        return response()->json([
+        return api_success([
             'user' => $user,
-            'token' => $token,
-        ]);
+            'sanctum_token' => $token,
+        ], 'login berhasil');
     }
 
     public function logout(Request $request)
     {
         $request->user()->currentAccessToken()->delete();
 
-        return response()->json(['message' => 'Logged out']);
+        return api_success(null, 'logout berhasil');
     }
 }

@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\SocialAccount;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Http;
+use Illuminate\Support\Facades\Log;
 use Laravel\Socialite\Contracts\User as SocialiteUser;
 use Laravel\Socialite\Facades\Socialite;
 
@@ -40,6 +41,10 @@ class InstagramService
         ]);
 
         if ($response->failed()) {
+            Log::error('Instagram token exchange failed', [
+                'response_status' => $response->status(),
+                'response_body' => $response->body(),
+            ]);
             throw new \Exception('Failed to exchange token: ' . $response->body());
         }
 

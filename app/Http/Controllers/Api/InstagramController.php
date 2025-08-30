@@ -18,60 +18,55 @@ class InstagramController extends Controller
     {
         $this->instagramService = $instagramService;
     }
-    /**
-     * Generate redirect URL ke Instagram dengan state custom
-     */
+
     public function redirectToInstagram(Request $request): JsonResponse
     {
-        // generate random state
         $state = Str::random(32);
 
-        // simpan ke cache biar bisa diverifikasi di callback (10 menit)
         Cache::put("oauth_state:{$state}", $request->user()->id, now()->addMinutes(10));
 
-        // generate URL redirect
         $redirectUrl = Socialite::driver('instagram')
-            ->stateless() // tidak pakai session Laravel
+            ->stateless()
             ->scopes(['instagram_business_basic', 'instagram_business_manage_insights'])
             ->with(['state' => $state])
             ->redirect()
             ->getTargetUrl();
 
-        return response()->json([
-            'url' => $redirectUrl,
-        ]);
+        return api_success(
+            [
+                'url' => $redirectUrl,
+            ],
+            'url login instagram berhasil dibuat',
+        );
     }
 
     public function handleCallback(Request $request): JsonResponse
     {
         try {
             $state = $request->query('state');
-            $code = $request->query('code');
 
-            // cek state valid
             $userId = Cache::pull("oauth_state:{$state}");
             if (!$userId) {
-                return response()->json(['error' => 'Invalid or expired state'], 400);
+                return api_error('state tidak valid atau kadaluarsa');
             }
 
-            // ambil data user IG
             $instagramUser = Socialite::driver('instagram')->stateless()->user();
 
-            // simpan ke DB via service
             $this->instagramService->connectAccount($userId, $instagramUser);
 
-            return response()->json([
-                'message' => 'Instagram account connected successfully',
-                'data' => [
-                    'id' => $instagramUser->getId(),
-                    'name' => $instagramUser->getName() ?? $instagramUser->getNickname(),
-                    'avatar' => $instagramUser->getAvatar(),
-                    'account_type' => $instagramUser->account_type,
-                    'token' => $instagramUser->token,
+            return api_success(
+                [
+                    'user' => [
+                        'id' => $instagramUser->getId(),
+                        'name' => $instagramUser->getName() ?? $instagramUser->getNickname(),
+                        'avatar' => $instagramUser->getAvatar(),
+                        'account_type' => $instagramUser->account_type,
+                    ],
                 ],
-            ]);
+                'berhasil terhubung dengan akun instagram',
+            );
         } catch (\Exception $e) {
-            return response()->json(['error' => $e->getMessage()], 500);
+            return api_error('gagal terhubung dengan akun instagram', 400, $e->getMessage());
         }
     }
 }
