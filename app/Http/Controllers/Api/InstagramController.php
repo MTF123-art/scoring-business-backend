@@ -21,39 +21,44 @@ class InstagramController extends Controller
 
     public function redirectToInstagram(Request $request): JsonResponse
     {
-        $state = Str::random(32);
-
-        Cache::put("oauth_state:{$state}", $request->user()->id, now()->addMinutes(10));
-
-        $redirectUrl = Socialite::driver('instagram')
-            ->stateless()
-            ->scopes(['instagram_business_basic', 'instagram_business_manage_insights'])
-            ->with(['state' => $state])
-            ->redirect()
-            ->getTargetUrl();
-
-        return api_success(
-            [
-                'url' => $redirectUrl,
-            ],
-            'url login instagram berhasil dibuat',
-        );
+        try {
+            $state = Str::random(32);
+            Cache::put("oauth_state:{$state}", $request->user()->id, now()->addMinutes(10));
+            $redirectUrl = Socialite::driver('instagram')
+                ->stateless()
+                ->scopes(['instagram_business_basic', 'instagram_business_manage_insights'])
+                ->with(['state' => $state])
+                ->redirect()
+                ->getTargetUrl();
+            return api_success(
+                [
+                    'url' => $redirectUrl,
+                ],
+                'url login instagram berhasil dibuat',
+            );
+        } catch (\Exception $e) {
+            return api_error('gagal membuat url login instagram', 500, $e->getMessage());
+        }
     }
 
     public function handleCallback(Request $request): JsonResponse
     {
         try {
             $state = $request->query('state');
-
             $userId = Cache::pull("oauth_state:{$state}");
             if (!$userId) {
                 return api_error('state tidak valid atau kadaluarsa');
             }
-
-            $instagramUser = Socialite::driver('instagram')->stateless()->user();
-
-            $this->instagramService->connectAccount($userId, $instagramUser);
-
+            try {
+                $instagramUser = Socialite::driver('instagram')->stateless()->user();
+            } catch (\Exception $e) {
+                return api_error('gagal mengambil data user instagram', 400, $e->getMessage());
+            }
+            try {
+                $this->instagramService->connectAccount($userId, $instagramUser);
+            } catch (\Exception $e) {
+                return api_error('gagal menyimpan akun instagram', 400, $e->getMessage());
+            }
             return api_success(
                 [
                     'user' => [
@@ -66,7 +71,7 @@ class InstagramController extends Controller
                 'berhasil terhubung dengan akun instagram',
             );
         } catch (\Exception $e) {
-            return api_error('gagal terhubung dengan akun instagram', 400, $e->getMessage());
+            return api_error('gagal terhubung dengan akun instagram', 500, $e->getMessage());
         }
     }
 }
