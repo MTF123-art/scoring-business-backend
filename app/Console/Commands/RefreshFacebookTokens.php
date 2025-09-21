@@ -39,10 +39,10 @@ class RefreshFacebookTokens extends Command
         $accounts = SocialAccount::where('provider', 'facebook')->get();
 
         foreach ($accounts as $account) {
-            // $expiresAt = $account->expires_at ? Carbon::parse($account->expires_at) : null;
-            // $daysLeft = $expiresAt ? now()->diffInDays($expiresAt, false) : null;
+            $expiresAt = $account->expires_at ? Carbon::parse($account->expires_at) : null;
+            $daysLeft = $expiresAt ? now()->diffInDays($expiresAt, false) : null;
 
-            // if ($daysLeft === null || $daysLeft < 7) {
+            if ($daysLeft === null || $daysLeft < 7) {
                 try {
                     $oldToken = $account->access_token;
                     [$newToken, $expiresAt] = $this->facebookService->refreshAccessToken($account->access_token);
@@ -53,9 +53,9 @@ class RefreshFacebookTokens extends Command
                 } catch (\Exception $e) {
                     $this->error("Gagal refresh token untuk user_id: {$account->user_id} - {$e->getMessage()}");
                 }
-            // } else {
-            //     $this->info("Token user_id: {$account->user_id} masih berlaku > 7 hari, skip refresh.");
-            // }
+            } else {
+                $this->info("Token user_id: {$account->user_id} masih berlaku > 7 hari, skip refresh.");
+            }
         }
     }
 }

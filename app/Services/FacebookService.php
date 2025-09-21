@@ -55,7 +55,7 @@ class FacebookService
       }
       $data = $response->json();
       $token = $data['access_token'];
-      $expiresIn = $data['expires_in'] ?? 60 * 60 * 24 * 60; // fallback 60 hari
+      $expiresIn = $data['expires_in'] ?? 60 * 60 * 24 * 60;
       $expiresAt = now()->addSeconds($expiresIn);
       return [$token, $expiresAt];
    }
