@@ -4,6 +4,7 @@ namespace App\Console\Commands;
 
 use App\Models\SocialAccount;
 use App\Services\InstagramService;
+use Carbon\Carbon;
 use Illuminate\Console\Command;
 
 class RefreshInstagramTokens extends Command
@@ -38,16 +39,22 @@ class RefreshInstagramTokens extends Command
         $accounts = SocialAccount::where('provider', 'instagram')->get();
 
         foreach ($accounts as $account) {
-            try {
-                $oldToken = $account->access_token;
-                [$newToken, $expiresAt] = $this->instagramService->refreshAccessToken($account->access_token);
-                $account->access_token = $newToken;
-                $account->expires_at = $expiresAt;
-                $account->save();
-                $this->info("Berhasil refresh token untuk user_id: {$account->user_id}");
-                $this->info("Berhasil refresh token untuk user_id: {$account->user_id} - {$oldToken} -> {$newToken}");
-            } catch (\Exception $e) {
-                $this->error("Gagal refresh token untuk user_id: {$account->user_id} - {$e->getMessage()}");
+            $expiresAt = $account->expires_at ? Carbon::parse($account->expires_at) : null;
+            $daysLeft = $expiresAt ? now()->diffInDays($expiresAt, false) : null;
+
+            if ($daysLeft === null || $daysLeft < 7) {
+                try {
+                    $oldToken = $account->access_token;
+                    [$newToken, $expiresAt] = $this->instagramService->refreshAccessToken($account->access_token);
+                    $account->access_token = $newToken;
+                    $account->expires_at = $expiresAt;
+                    $account->save();
+                    $this->info("Berhasil refresh token untuk user_id: {$account->user_id} - {$oldToken} -> {$newToken}");
+                } catch (\Exception $e) {
+                    $this->error("Gagal refresh token untuk user_id: {$account->user_id} - {$e->getMessage()}");
+                }
+            } else {
+                $this->info("Token user_id: {$account->user_id} masih berlaku > 7 hari, skip refresh.");
             }
         }
     }

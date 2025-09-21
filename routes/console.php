@@ -11,5 +11,8 @@ Artisan::command('inspire', function () {
 Schedule::command('app:refresh-instagram-tokens')
     ->everyMinute();
 
+Schedule::command('app:refresh-facebook-tokens')
+    ->everyMinute();
+
 Schedule::command('app:fetch-instagram-metrics')
     ->everyMinute();
