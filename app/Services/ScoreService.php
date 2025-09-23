@@ -11,10 +11,14 @@ class ScoreService
    public function calculateForBusiness($businessId, $date = null)
    {
       $date = $date ?? Carbon::today();
+      // Pastikan format tanggal konsisten (Y-m-d)
+      if ($date instanceof Carbon) {
+         $date = $date->toDateString();
+      }
 
       $igMetric = Metric::where('provider', 'instagram')
          ->whereHas('socialAccount', function ($q) use ($businessId) {
-            $q->where('business_id', $businessId);
+            $q->where('user_id', $businessId);
          })
          ->whereDate('date', $date)
          ->latest()
@@ -22,7 +26,7 @@ class ScoreService
 
       $fbMetric = Metric::where('provider', 'facebook')
          ->whereHas('socialAccount', function ($q) use ($businessId) {
-            $q->where('business_id', $businessId);
+            $q->where('user_id', $businessId);
          })
          ->whereDate('date', $date)
          ->latest()
