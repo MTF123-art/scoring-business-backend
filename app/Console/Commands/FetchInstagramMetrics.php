@@ -39,7 +39,7 @@ class FetchInstagramMetrics extends Command
         foreach ($accounts as $account) {
             try {
                 $metrics = $this->instagramService->getMetrics($account);
-                // Simpan metrics ke db
+                $this->instagramService->storeMetrics($account, $metrics);
                 $this->info("Berhasil ambil metrik untuk user_id: {$account->user_id}");
                 $this->info("Data Metrik: " . json_encode($metrics));
             } catch (\Exception $e) {

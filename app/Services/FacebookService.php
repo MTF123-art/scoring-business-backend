@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\Metric;
 use App\Models\SocialAccount;
 use Illuminate\Http\Client\Factory as HttpFactory;
 use Illuminate\Log\LogManager;
@@ -23,16 +24,17 @@ class FacebookService
    {
       $shortLivedToken = $facebookUser->token;
       [$longLivedToken, $expiresAt] = $this->exchangeForLongLivedToken($shortLivedToken);
+      $facebookPage = $this->getUserPages($facebookUser->getId(), $longLivedToken);
       return SocialAccount::updateOrCreate(
          [
             'provider' => 'facebook',
-            'provider_id' => $facebookUser->getId(),
+            'provider_id' => $facebookPage['0']['id'],
          ],
          [
             'user_id' => $userId,
             'name' => $facebookUser->getName() ?? $facebookUser->getNickname(),
             'avatar' => $facebookUser->getAvatar(),
-            'access_token' => $longLivedToken,
+            'access_token' => $facebookPage['0']['access_token'],
             'expires_at' => $expiresAt,
          ],
       );
@@ -60,26 +62,21 @@ class FacebookService
       return [$token, $expiresAt];
    }
 
-   public function refreshAccessToken(string $longLivedToken)
+   protected function getUserPages(string $userId, string $userAccessToken): array
    {
-      $response = $this->http->get($this->baseUrl . '/oauth/access_token', [
-         'grant_type' => 'fb_exchange_token',
-         'client_id' => config('services.facebook.client_id'),
-         'client_secret' => config('services.facebook.client_secret'),
-         'fb_exchange_token' => $longLivedToken,
+      $url = $this->baseUrl . "/{$userId}/accounts";
+      $response = $this->http->get($url, [
+         'access_token' => $userAccessToken,
       ]);
       if ($response->failed()) {
-         $this->log->error('Facebook token refresh failed', [
+         $this->log->error('Gagal mengambil daftar Facebook Page', [
             'response_status' => $response->status(),
             'response_body' => $response->body(),
          ]);
-         throw new \Exception('Failed to refresh token: ' . $response->body());
+         throw new \Exception('Gagal mengambil daftar Facebook Page');
       }
       $data = $response->json();
-      $token = $data['access_token'];
-      $expiresIn = $data['expires_in'] ?? 60 * 60 * 24 * 60;
-      $expiresAt = now()->addSeconds($expiresIn);
-      return [$token, $expiresAt];
+      return $data['data'] ?? [];
    }
 
    public function getMetrics(SocialAccount $account)
@@ -163,5 +160,22 @@ class FacebookService
          'engagement_per_post' => round($engagementPerPost, 2),
          'post_count' => $postCount,
       ];
+   }
+
+   public function storeMetrics(SocialAccount $account, array $metrics, $date = null)
+   {
+      $date = $date ?? now()->toDateString();
+      return Metric::updateOrCreate(
+         [
+            'social_account_id' => $account->id,
+            'provider' => 'facebook',
+            'date' => $date,
+         ],
+         array_merge($metrics, [
+            'social_account_id' => $account->id,
+            'provider' => 'facebook',
+            'date' => $date,
+         ])
+      );
    }
 }

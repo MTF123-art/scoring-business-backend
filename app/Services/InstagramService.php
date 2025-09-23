@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\Metric;
 use App\Models\SocialAccount;
 use Illuminate\Http\Client\Factory as HttpFactory;
 use Illuminate\Log\LogManager;
@@ -160,5 +161,22 @@ class InstagramService
             'engagement_per_post' => round($engagementPerPost, 2),
             'post_count' => $postCount,
         ];
+    }
+
+    public function storeMetrics(SocialAccount $account, array $metrics, $date = null)
+    {
+        $date = $date ?? now()->toDateString();
+        return Metric::updateOrCreate(
+            [
+                'social_account_id' => $account->id,
+                'provider' => 'instagram',
+                'date' => $date,
+            ],
+            array_merge($metrics, [
+                'social_account_id' => $account->id,
+                'provider' => 'instagram',
+                'date' => $date,
+            ])
+        );
     }
 }
