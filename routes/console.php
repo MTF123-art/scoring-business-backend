@@ -9,10 +9,13 @@ Artisan::command('inspire', function () {
 })->purpose('Display an inspiring quote');
 
 Schedule::command('app:refresh-instagram-tokens')
-    ->everyMinute();
-
-Schedule::command('app:refresh-facebook-tokens')
-    ->everyMinute();
+    ->dailyAt('00:00');
 
 Schedule::command('app:fetch-instagram-metrics')
-    ->everyMinute();
+    ->dailyAt('00:00');
+
+Schedule::command('app:fetch-facebook-metrics')
+    ->dailyAt('00:00');
+
+Schedule::command('app:calculate-scores')
+    ->dailyAt('00:00');
