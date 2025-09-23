@@ -11,7 +11,7 @@ use Laravel\Socialite\Contracts\User as SocialiteUser;
 
 class InstagramService
 {
-    protected string $baseUrl = 'https://graph.instagram.com';
+    protected string $baseUrl = 'https://graph.instagram.com/v23.0';
     protected $http;
     protected $log;
 
@@ -81,13 +81,13 @@ class InstagramService
         return [$token, $expiresAt];
     }
 
-    public function getMetrics(SocialAccount $account)
+    /**
+     * Ambil profil IG (followers_count, media_count)
+     */
+    protected function fetchProfile(string $userId, string $accessToken): array
     {
-        $accessToken = $account->access_token;
-        $userId = $account->provider_id;
-
         $profileResponse = $this->http->get("{$this->baseUrl}/{$userId}", [
-            'fields' => 'id,username,followers_count,media_count',
+            'fields' => 'followers_count,media_count',
             'access_token' => $accessToken,
         ]);
         if ($profileResponse->failed()) {
@@ -98,11 +98,18 @@ class InstagramService
             throw new \Exception('Gagal mengambil data profil Instagram');
         }
         $profile = $profileResponse->json();
-        $followers = $profile['followers_count'] ?? 0;
-        $mediaCount = $profile['media_count'] ?? 0;
+        return [
+            'followers' => (int)($profile['followers_count'] ?? 0),
+            'media_count' => (int)($profile['media_count'] ?? 0),
+        ];
+    }
 
+    /**
+     * Ambil daftar ID media (post) IG
+     */
+    protected function fetchMediaIds(string $userId, string $accessToken): array
+    {
         $mediaResponse = $this->http->get("{$this->baseUrl}/{$userId}/media", [
-            'fields' => 'id,caption,like_count,comments_count',
             'access_token' => $accessToken,
         ]);
         if ($mediaResponse->failed()) {
@@ -114,52 +121,123 @@ class InstagramService
         }
         $mediaData = $mediaResponse->json();
         $posts = $mediaData['data'] ?? [];
+        // return only valid IDs
+        return array_values(array_filter(array_map(static function ($post) {
+            return $post['id'] ?? null;
+        }, $posts)));
+    }
 
+    /**
+     * Ambil insights per media: likes, comments, reach (shares diabaikan untuk saat ini)
+     */
+    protected function fetchMediaInsights(string $mediaId, string $accessToken): array
+    {
+        $insightsResp = $this->http->get("{$this->baseUrl}/{$mediaId}/insights", [
+            'metric' => 'likes,comments,shares,reach',
+            'access_token' => $accessToken,
+        ]);
+        if ($insightsResp->failed()) {
+            $this->log->warning('Gagal mengambil insights media Instagram, default 0', [
+                'media_id' => $mediaId,
+                'response_status' => $insightsResp->status(),
+                'response_body' => $insightsResp->body(),
+            ]);
+            return ['likes' => 0, 'comments' => 0, 'reach' => 0];
+        }
+
+        $likes = 0;
+        $comments = 0;
+        $reach = 0;
+        $data = $insightsResp->json()['data'] ?? [];
+        foreach ($data as $metric) {
+            $name = $metric['name'] ?? '';
+            $value = (int)($metric['values'][0]['value'] ?? 0);
+            if ($name === 'likes') {
+                $likes = $value;
+            } elseif ($name === 'comments') {
+                $comments = $value;
+            } elseif ($name === 'reach') {
+                $reach = $value;
+            }
+            // shares tersedia, tapi tidak tersimpan pada tabel metrics saat ini
+        }
+
+        return [
+            'likes' => $likes,
+            'comments' => $comments,
+            'reach' => $reach,
+        ];
+    }
+
+    /**
+     * Agregasi metrik dari semua media
+     */
+    protected function aggregateMediaMetrics(array $mediaIds, string $accessToken): array
+    {
         $totalLikes = 0;
         $totalComments = 0;
         $totalReach = 0;
-        $totalEngagement = 0;
-        $postCount = count($posts);
+        $postCount = count($mediaIds);
 
-        foreach ($posts as $post) {
-            $likes = $post['like_count'] ?? 0;
-            $comments = $post['comments_count'] ?? 0;
-            $reach = $this->http->get("{$this->baseUrl}/{$post['id']}/insights", [
-                'metric' => 'reach',
-                'access_token' => $accessToken,
-            ]);
-            if ($reach->failed()) {
-                $this->log->error('Gagal mengambil media Instagram', [
-                    'response_status' => $reach->status(),
-                    'response_body' => $reach->body(),
-                ]);
-                throw new \Exception('Gagal mengambil data media Instagram');
-            }
-            $reach = $reach->json();
-            $reach = $reach['data'][0]['values'][0]['value'] ?? 0;
-            $totalLikes += $likes;
-            $totalComments += $comments;
-            $totalReach += $reach;
-            $totalEngagement += $likes + $comments; // share tidak tersedia di IG Graph API
+        foreach ($mediaIds as $mediaId) {
+            $ins = $this->fetchMediaInsights($mediaId, $accessToken);
+            $totalLikes += $ins['likes'];
+            $totalComments += $ins['comments'];
+            $totalReach += $ins['reach'];
+            // shares diabaikan untuk saat ini
         }
 
-        // Engagement Rate 
-        $engagementRate = $followers > 0 ? (($totalLikes + $totalComments) / $followers) * 100 : 0;
-        // Reach Ratio 
-        $reachRatio = $followers > 0 ? $totalReach / $followers : 0;
-        // Engagement per Post 
-        $engagementPerPost = $postCount > 0 ? $totalEngagement / $postCount : 0;
-
         return [
-            'followers' => $followers,
-            'media_count' => $mediaCount,
             'total_likes' => $totalLikes,
             'total_comments' => $totalComments,
             'total_reach' => $totalReach,
+            'total_engagement' => $totalLikes + $totalComments,
+            'post_count' => $postCount,
+        ];
+    }
+
+    /**
+     * Hitung metrik turunan (engagement rate, reach ratio, engagement per post)
+     */
+    protected function computeDerivedMetrics(int $followers, int $totalLikes, int $totalComments, int $totalReach, int $postCount): array
+    {
+        $engagementRate = $followers > 0 ? (($totalLikes + $totalComments) / $followers) * 100 : 0;
+        $reachRatio = $followers > 0 ? $totalReach / $followers : 0;
+        $engagementPerPost = $postCount > 0 ? ($totalLikes + $totalComments) / $postCount : 0;
+
+        return [
             'engagement_rate' => round($engagementRate, 2),
             'reach_ratio' => round($reachRatio, 2),
             'engagement_per_post' => round($engagementPerPost, 2),
-            'post_count' => $postCount,
+        ];
+    }
+
+    public function getMetrics(SocialAccount $account)
+    {
+        $accessToken = $account->access_token;
+        $userId = $account->provider_id;
+
+        $profile = $this->fetchProfile($userId, $accessToken);
+        $mediaIds = $this->fetchMediaIds($userId, $accessToken);
+        $agg = $this->aggregateMediaMetrics($mediaIds, $accessToken);
+        $derived = $this->computeDerivedMetrics(
+            $profile['followers'],
+            $agg['total_likes'],
+            $agg['total_comments'],
+            $agg['total_reach'],
+            $agg['post_count']
+        );
+
+        return [
+            'followers' => $profile['followers'],
+            'media_count' => $profile['media_count'],
+            'total_likes' => $agg['total_likes'],
+            'total_comments' => $agg['total_comments'],
+            'total_reach' => $agg['total_reach'],
+            'engagement_rate' => $derived['engagement_rate'],
+            'reach_ratio' => $derived['reach_ratio'],
+            'engagement_per_post' => $derived['engagement_per_post'],
+            'post_count' => $agg['post_count'],
         ];
     }
 
