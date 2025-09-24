@@ -20,6 +20,9 @@ return new class extends Migration {
             $table->text('access_token');
             $table->timestamp('expires_at')->nullable(); 
             $table->timestamps();
+
+            $table->unique(['provider', 'provider_id'], 'social_accounts_provider_provider_id_unique');
+            $table->unique(['user_id', 'provider'], 'social_accounts_user_id_provider_unique');
         });
     }
 

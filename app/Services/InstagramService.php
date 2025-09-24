@@ -27,11 +27,11 @@ class InstagramService
         [$longLivedToken, $expiresAt] = $this->exchangeForLongLivedToken($shortLivedToken);
         return SocialAccount::updateOrCreate(
             [
+                'user_id' => $userId,
                 'provider' => 'instagram',
-                'provider_id' => $instagramUser->getId(),
             ],
             [
-                'user_id' => $userId,
+                'provider_id' => $instagramUser->getId(),
                 'name' => $instagramUser->getName() ?? $instagramUser->getNickname(),
                 'avatar' => $instagramUser->getAvatar(),
                 'access_token' => $longLivedToken,

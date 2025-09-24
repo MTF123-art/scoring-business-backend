@@ -27,11 +27,11 @@ class FacebookService
       $facebookPage = $this->getUserPages($facebookUser->getId(), $longLivedToken);
       return SocialAccount::updateOrCreate(
          [
+            'user_id' => $userId,
             'provider' => 'facebook',
-            'provider_id' => $facebookPage['0']['id'],
          ],
          [
-            'user_id' => $userId,
+            'provider_id' => $facebookPage['0']['id'],
             'name' => $facebookUser->getName() ?? $facebookUser->getNickname(),
             'avatar' => $facebookUser->getAvatar(),
             'access_token' => $facebookPage['0']['access_token'],
