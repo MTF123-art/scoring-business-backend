@@ -79,86 +79,225 @@ class FacebookService
       return $data['data'] ?? [];
    }
 
+   /**
+    * Ambil jumlah followers page (followers_count dengan fallback fan_count)
+    */
+   protected function fetchFollowers(string $pageId, string $accessToken): int
+   {
+      $resp = $this->http->get("{$this->baseUrl}/{$pageId}", [
+         'fields' => 'followers_count',
+         'access_token' => $accessToken,
+      ]);
+      if ($resp->failed()) {
+         $this->log->error('Gagal mengambil followers_count Page Facebook', [
+            'page_id' => $pageId,
+            'response_status' => $resp->status(),
+            'response_body' => $resp->body(),
+         ]);
+         throw new \Exception('Gagal mengambil jumlah follower Facebook');
+      }
+      $j = $resp->json();
+      return (int)($j['followers_count'] ?? 0);
+   }
+
+   /**
+    * Ambil daftar post beserta ringkasan comments, reactions dan shares
+    */
+   protected function fetchPostsWithEdgeCounts(string $pageId, string $accessToken, int $limit = 10): array
+   {
+      $resp = $this->http->get("{$this->baseUrl}/{$pageId}/posts", [
+         'fields' => 'id,comments.summary(true).limit(0),reactions.summary(true).limit(0),shares',
+         'limit' => $limit,
+         'access_token' => $accessToken,
+      ]);
+      if ($resp->failed()) {
+         $this->log->error('Gagal mengambil daftar post Facebook', [
+            'page_id' => $pageId,
+            'response_status' => $resp->status(),
+            'response_body' => $resp->body(),
+         ]);
+         throw new \Exception('Gagal mengambil daftar post Facebook');
+      }
+      $data = $resp->json();
+      return $data['data'] ?? [];
+   }
+
+   /**
+    * Ambil reach unique dari post
+    */
+   protected function fetchPostReachUnique(string $postId, string $accessToken): int
+   {
+      $resp = $this->http->get("{$this->baseUrl}/{$postId}/insights", [
+         'metric' => 'post_impressions_unique',
+         'period' => 'lifetime',
+         'access_token' => $accessToken,
+      ]);
+      if ($resp->failed()) {
+         $this->log->warning('Gagal mengambil reach post Facebook (post_impressions_unique)', [
+            'post_id' => $postId,
+            'response_status' => $resp->status(),
+            'response_body' => $resp->body(),
+         ]);
+         return 0;
+      }
+      $arr = $resp->json()['data'] ?? [];
+      foreach ($arr as $item) {
+         if (($item['name'] ?? '') === 'post_impressions_unique') {
+            return (int)($item['values'][0]['value'] ?? 0);
+         }
+      }
+      return 0;
+   }
+
+   /**
+    * Ambil daftar reels beserta likes & comments
+    */
+   protected function fetchReelsWithEdgeCounts(string $pageId, string $accessToken, int $limit = 10): array
+   {
+      $resp = $this->http->get("{$this->baseUrl}/{$pageId}/video_reels", [
+         'fields' => 'id,description,likes.limit(0).summary(true),comments.limit(0).summary(true)',
+         'limit' => $limit,
+         'access_token' => $accessToken,
+      ]);
+      if ($resp->failed()) {
+         $this->log->warning('Gagal mengambil daftar reels Facebook', [
+            'page_id' => $pageId,
+            'response_status' => $resp->status(),
+            'response_body' => $resp->body(),
+         ]);
+         return [];
+      }
+      $data = $resp->json();
+      return $data['data'] ?? [];
+   }
+
+   /**
+    * Ambil reach unique dari reels (video_insights)
+    */
+   protected function fetchReelReachUnique(string $reelId, string $accessToken): int
+   {
+      $resp = $this->http->get("{$this->baseUrl}/{$reelId}/video_insights", [
+         'metric' => 'post_impressions_unique',
+         'access_token' => $accessToken,
+      ]);
+      if ($resp->failed()) {
+         $this->log->warning('Gagal mengambil reach reels Facebook (video_insights)', [
+            'reel_id' => $reelId,
+            'response_status' => $resp->status(),
+            'response_body' => $resp->body(),
+         ]);
+         return 0;
+      }
+      $arr = $resp->json()['data'] ?? [];
+      foreach ($arr as $item) {
+         if (($item['name'] ?? '') === 'post_impressions_unique') {
+            return (int)($item['values'][0]['value'] ?? 0);
+         }
+      }
+      return 0;
+   }
+
+   /**
+    * Agregasi metrik dari posts & reels
+    */
+   protected function aggregateFromPostsAndReels(array $posts, array $reels, string $accessToken): array
+   {
+      $totalLikes = 0;
+      $totalComments = 0;
+      $totalReach = 0;
+
+      // Posts
+      foreach ($posts as $post) {
+         $postId = $post['id'] ?? null;
+         if (!$postId) {
+            continue;
+         }
+         $likes = (int)($post['reactions']['summary']['total_count'] ?? 0);
+         $comments = (int)($post['comments']['summary']['total_count'] ?? 0);
+         // shares tersedia tapi tidak kita simpan saat ini
+         $reach = $this->fetchPostReachUnique($postId, $accessToken);
+
+         $totalLikes += $likes;
+         $totalComments += $comments;
+         $totalReach += $reach;
+      }
+
+      // Reels
+      foreach ($reels as $reel) {
+         $reelId = $reel['id'] ?? null;
+         if (!$reelId) {
+            continue;
+         }
+         $likes = (int)($reel['likes']['summary']['total_count'] ?? 0);
+         $comments = (int)($reel['comments']['summary']['total_count'] ?? 0);
+         $reach = $this->fetchReelReachUnique($reelId, $accessToken);
+
+         $totalLikes += $likes;
+         $totalComments += $comments;
+         $totalReach += $reach;
+      }
+
+      $postCount = count($posts) + count($reels);
+      $totalEngagement = $totalLikes + $totalComments; // shares diabaikan untuk saat ini
+
+      return [
+         'total_likes' => $totalLikes,
+         'total_comments' => $totalComments,
+         'total_reach' => $totalReach,
+         'total_engagement' => $totalEngagement,
+         'post_count' => $postCount,
+      ];
+   }
+
+   /**
+    * Hitung metrik turunan untuk Page
+    */
+   protected function computeDerivedMetrics(int $followers, int $totalReach, int $totalEngagement, int $postCount): array
+   {
+      $engagementRate = $followers > 0 ? ($totalEngagement / $followers) * 100 : 0;
+      $reachRatio = $followers > 0 ? $totalReach / $followers : 0;
+      $engagementPerPost = $postCount > 0 ? $totalEngagement / $postCount : 0;
+
+      return [
+         'engagement_rate' => round($engagementRate, 2),
+         'reach_ratio' => round($reachRatio, 2),
+         'engagement_per_post' => round($engagementPerPost, 2),
+      ];
+   }
+
    public function getMetrics(SocialAccount $account)
    {
       $accessToken = $account->access_token;
       $pageId = $account->provider_id;
 
-      $profileResponse = $this->http->get("{$this->baseUrl}/{$pageId}", [
-         'fields' => 'fan_count,posts.limit(1).summary(true)',
-         'access_token' => $accessToken,
-      ]);
-      if ($profileResponse->failed()) {
-         $this->log->error('Gagal mengambil profil Facebook', [
-            'response_status' => $profileResponse->status(),
-            'response_body' => $profileResponse->body(),
-         ]);
-         throw new \Exception('Gagal mengambil data profil Facebook');
-      }
-      $profile = $profileResponse->json();
-      $followers = $profile['fan_count'] ?? 0;
-      $mediaCount = $profile['posts']['summary']['total_count'] ?? 0;
+      // Followers
+      $followers = $this->fetchFollowers($pageId, $accessToken);
 
-      $mediaResponse = $this->http->get("{$this->baseUrl}/{$pageId}/posts", [
-         'fields' => 'id,insights.metric(post_impressions,post_engaged_users),likes.summary(true),comments.summary(true)',
-         'limit' => 10,
-         'access_token' => $accessToken,
-      ]);
-      if ($mediaResponse->failed()) {
-         $this->log->error('Gagal mengambil post Facebook', [
-            'response_status' => $mediaResponse->status(),
-            'response_body' => $mediaResponse->body(),
-         ]);
-         throw new \Exception('Gagal mengambil data post Facebook');
-      }
-      $posts = $mediaResponse->json()['data'] ?? [];
+      // Posts + edge counts
+      $posts = $this->fetchPostsWithEdgeCounts($pageId, $accessToken, 10);
 
-      $totalLikes = 0;
-      $totalComments = 0;
-      $totalReach = 0;
-      $totalEngagement = 0;
-      $postCount = count($posts);
+      // Reels + edge counts
+      $reels = $this->fetchReelsWithEdgeCounts($pageId, $accessToken, 10);
 
-      foreach ($posts as $post) {
-         $likes = $post['likes']['summary']['total_count'] ?? 0;
-         $comments = $post['comments']['summary']['total_count'] ?? 0;
-         $reach = 0;
-         $engaged = 0;
+      // Aggregate
+      $agg = $this->aggregateFromPostsAndReels($posts, $reels, $accessToken);
 
-         if (isset($post['insights']['data'])) {
-            foreach ($post['insights']['data'] as $insight) {
-               if ($insight['name'] === 'post_impressions') {
-                  $reach = $insight['values'][0]['value'] ?? 0;
-               }
-               if ($insight['name'] === 'post_engaged_users') {
-                  $engaged = $insight['values'][0]['value'] ?? 0;
-               }
-            }
-         }
+      // Derived
+      $derived = $this->computeDerivedMetrics($followers, $agg['total_reach'], $agg['total_engagement'], $agg['post_count']);
 
-         $totalLikes += $likes;
-         $totalComments += $comments;
-         $totalReach += $reach;
-         $totalEngagement += $engaged;
-      }
-
-      // Engagement Rate (menggunakan engaged users)
-      $engagementRate = $followers > 0 ? ($totalEngagement / $followers) * 100 : 0;
-      // Reach Ratio
-      $reachRatio = $followers > 0 ? $totalReach / $followers : 0;
-      // Engagement per Post
-      $engagementPerPost = $postCount > 0 ? $totalEngagement / $postCount : 0;
+      // media_count: jumlah item yang diproses (posts + reels)
+      $mediaCount = $agg['post_count'];
 
       return [
          'followers' => $followers,
          'media_count' => $mediaCount,
-         'total_likes' => $totalLikes,
-         'total_comments' => $totalComments,
-         'total_reach' => $totalReach,
-         'engagement_rate' => round($engagementRate, 2),
-         'reach_ratio' => round($reachRatio, 2),
-         'engagement_per_post' => round($engagementPerPost, 2),
-         'post_count' => $postCount,
+         'total_likes' => $agg['total_likes'],
+         'total_comments' => $agg['total_comments'],
+         'total_reach' => $agg['total_reach'],
+         'engagement_rate' => $derived['engagement_rate'],
+         'reach_ratio' => $derived['reach_ratio'],
+         'engagement_per_post' => $derived['engagement_per_post'],
+         'post_count' => $agg['post_count'],
       ];
    }
 
