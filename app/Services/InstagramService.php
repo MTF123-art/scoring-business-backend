@@ -128,7 +128,7 @@ class InstagramService
     }
 
     /**
-     * Ambil insights per media: likes, comments, reach (shares diabaikan untuk saat ini)
+     * Ambil insights per media: likes, comments, shares, reach
      */
     protected function fetchMediaInsights(string $mediaId, string $accessToken): array
     {
@@ -142,11 +142,12 @@ class InstagramService
                 'response_status' => $insightsResp->status(),
                 'response_body' => $insightsResp->body(),
             ]);
-            return ['likes' => 0, 'comments' => 0, 'reach' => 0];
+            return ['likes' => 0, 'comments' => 0, 'shares' => 0, 'reach' => 0];
         }
 
         $likes = 0;
         $comments = 0;
+        $shares = 0;
         $reach = 0;
         $data = $insightsResp->json()['data'] ?? [];
         foreach ($data as $metric) {
@@ -156,15 +157,17 @@ class InstagramService
                 $likes = $value;
             } elseif ($name === 'comments') {
                 $comments = $value;
+            } elseif ($name === 'shares') {
+                $shares = $value;
             } elseif ($name === 'reach') {
                 $reach = $value;
             }
-            // shares tersedia, tapi tidak tersimpan pada tabel metrics saat ini
         }
 
         return [
             'likes' => $likes,
             'comments' => $comments,
+            'shares' => $shares,
             'reach' => $reach,
         ];
     }
@@ -177,21 +180,23 @@ class InstagramService
         $totalLikes = 0;
         $totalComments = 0;
         $totalReach = 0;
+        $totalShares = 0;
         $postCount = count($mediaIds);
 
         foreach ($mediaIds as $mediaId) {
             $ins = $this->fetchMediaInsights($mediaId, $accessToken);
             $totalLikes += $ins['likes'];
             $totalComments += $ins['comments'];
+            $totalShares += $ins['shares'];
             $totalReach += $ins['reach'];
-            // shares diabaikan untuk saat ini
         }
 
         return [
             'total_likes' => $totalLikes,
             'total_comments' => $totalComments,
+            'total_shares' => $totalShares,
             'total_reach' => $totalReach,
-            'total_engagement' => $totalLikes + $totalComments,
+            'total_engagement' => $totalLikes + $totalComments + $totalShares,
             'post_count' => $postCount,
         ];
     }
@@ -199,11 +204,11 @@ class InstagramService
     /**
      * Hitung metrik turunan (engagement rate, reach ratio, engagement per post)
      */
-    protected function computeDerivedMetrics(int $followers, int $totalLikes, int $totalComments, int $totalReach, int $postCount): array
+    protected function computeDerivedMetrics(int $followers, int $totalLikes, int $totalComments, int $totalShares, int $totalReach, int $postCount): array
     {
-        $engagementRate = $followers > 0 ? (($totalLikes + $totalComments) / $followers) * 100 : 0;
+        $engagementRate = $followers > 0 ? (($totalLikes + $totalComments + $totalShares) / $followers) * 100 : 0;
         $reachRatio = $followers > 0 ? $totalReach / $followers : 0;
-        $engagementPerPost = $postCount > 0 ? ($totalLikes + $totalComments) / $postCount : 0;
+        $engagementPerPost = $postCount > 0 ? ($totalLikes + $totalComments + $totalShares) / $postCount : 0;
 
         return [
             'engagement_rate' => round($engagementRate, 2),
@@ -224,6 +229,7 @@ class InstagramService
             $profile['followers'],
             $agg['total_likes'],
             $agg['total_comments'],
+            $agg['total_shares'],
             $agg['total_reach'],
             $agg['post_count']
         );
@@ -234,6 +240,7 @@ class InstagramService
             'total_likes' => $agg['total_likes'],
             'total_comments' => $agg['total_comments'],
             'total_reach' => $agg['total_reach'],
+            'total_shares' => $agg['total_shares'],
             'engagement_rate' => $derived['engagement_rate'],
             'reach_ratio' => $derived['reach_ratio'],
             'engagement_per_post' => $derived['engagement_per_post'],

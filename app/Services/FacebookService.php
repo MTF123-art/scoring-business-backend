@@ -204,6 +204,7 @@ class FacebookService
    {
       $totalLikes = 0;
       $totalComments = 0;
+      $totalShares = 0;
       $totalReach = 0;
 
       // Posts
@@ -214,11 +215,12 @@ class FacebookService
          }
          $likes = (int)($post['reactions']['summary']['total_count'] ?? 0);
          $comments = (int)($post['comments']['summary']['total_count'] ?? 0);
-         // shares tersedia tapi tidak kita simpan saat ini
+         $shares = (int)($post['shares']['count'] ?? 0);
          $reach = $this->fetchPostReachUnique($postId, $accessToken);
 
          $totalLikes += $likes;
          $totalComments += $comments;
+         $totalShares += $shares;
          $totalReach += $reach;
       }
 
@@ -238,11 +240,12 @@ class FacebookService
       }
 
       $postCount = count($posts) + count($reels);
-      $totalEngagement = $totalLikes + $totalComments; // shares diabaikan untuk saat ini
+      $totalEngagement = $totalLikes + $totalComments + $totalShares;
 
       return [
          'total_likes' => $totalLikes,
          'total_comments' => $totalComments,
+         'total_shares' => $totalShares,
          'total_reach' => $totalReach,
          'total_engagement' => $totalEngagement,
          'post_count' => $postCount,
@@ -293,6 +296,7 @@ class FacebookService
          'media_count' => $mediaCount,
          'total_likes' => $agg['total_likes'],
          'total_comments' => $agg['total_comments'],
+         'total_shares' => $agg['total_shares'] ?? 0,
          'total_reach' => $agg['total_reach'],
          'engagement_rate' => $derived['engagement_rate'],
          'reach_ratio' => $derived['reach_ratio'],

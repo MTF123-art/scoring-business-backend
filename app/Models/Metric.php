@@ -14,6 +14,7 @@ class Metric extends Model
         'media_count',
         'total_likes',
         'total_comments',
+        'total_shares',
         'total_reach',
         'engagement_rate',
         'reach_ratio',

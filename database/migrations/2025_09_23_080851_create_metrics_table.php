@@ -14,12 +14,13 @@ return new class extends Migration
         Schema::create('metrics', function (Blueprint $table) {
             $table->id();
             $table->unsignedBigInteger('social_account_id');
-            $table->string('provider'); 
+            $table->string('provider');
             $table->date('date');
             $table->integer('followers')->nullable();
             $table->integer('media_count')->nullable();
             $table->integer('total_likes')->nullable();
             $table->integer('total_comments')->nullable();
+            $table->integer('total_shares')->nullable();
             $table->integer('total_reach')->nullable();
             $table->float('engagement_rate')->nullable();
             $table->float('reach_ratio')->nullable();
