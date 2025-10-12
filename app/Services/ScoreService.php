@@ -16,7 +16,7 @@ class ScoreService
          $date = $date->toDateString();
       }
 
-      $igMetric = Metric::where('provider', 'instagram')
+      $igMetric = Metric::where('provider', 'instagram')->orWhere('provider', 'dummy_instagram')
          ->whereHas('socialAccount', function ($q) use ($businessId) {
             $q->where('user_id', $businessId);
          })
@@ -24,7 +24,7 @@ class ScoreService
          ->latest()
          ->first();
 
-      $fbMetric = Metric::where('provider', 'facebook')
+      $fbMetric = Metric::where('provider', 'facebook')->orWhere('provider', 'dummy_facebook')
          ->whereHas('socialAccount', function ($q) use ($businessId) {
             $q->where('user_id', $businessId);
          })

@@ -34,16 +34,45 @@ class FetchInstagramMetrics extends Command
      */
     public function handle()
     {
-        $accounts = SocialAccount::where('provider', 'instagram')->get();
+        $accounts = SocialAccount::where('provider', 'instagram')->orWhere('provider', 'dummy_instagram')->get();
 
         foreach ($accounts as $account) {
-            try {
-                $metrics = $this->instagramService->getMetrics($account);
+            if ($account->provider === 'instagram') {
+                try {
+                    $metrics = $this->instagramService->getMetrics($account);
+                    $this->instagramService->storeMetrics($account, $metrics);
+                    $this->info("Berhasil ambil metrik untuk user_id: {$account->user_id}");
+                    $this->info('Data Metrik: ' . json_encode($metrics));
+                } catch (\Exception $e) {
+                    $this->error("Gagal ambil metrik untuk user_id: {$account->user_id} - {$e->getMessage()}");
+                }
+            } elseif ($account->provider === 'dummy_instagram') {
+                $followers = rand(100, 1000);
+                $mediaCount = rand(10, 100);
+                $totalLikes = rand(1000, 10000);
+                $totalComments = rand(100, 1000);
+                $totalReach = rand(1000, 10000);
+                $totalShares = rand(100, 1000);
+                $derived = [
+                    'engagement_rate' => $followers > 0 ? ($totalLikes + $totalComments + $totalShares) / $followers * 100 : 0,
+                    'reach_ratio' => $followers > 0 ? $totalReach / $followers : 0,
+                    'engagement_per_post' => $mediaCount > 0 ? ($totalLikes + $totalComments + $totalShares) / $mediaCount : 0,
+                ];
+                $metrics = [
+                    'followers' => $followers,
+                    'media_count' => $mediaCount,
+                    'total_likes' => $totalLikes,
+                    'total_comments' => $totalComments,
+                    'total_reach' => $totalReach,
+                    'total_shares' => $totalShares,
+                    'engagement_rate' => $derived['engagement_rate'],
+                    'reach_ratio' => $derived['reach_ratio'],
+                    'engagement_per_post' => $derived['engagement_per_post'],
+                    'post_count' => $mediaCount,
+                ];
                 $this->instagramService->storeMetrics($account, $metrics);
-                $this->info("Berhasil ambil metrik untuk user_id: {$account->user_id}");
-                $this->info("Data Metrik: " . json_encode($metrics));
-            } catch (\Exception $e) {
-                $this->error("Gagal ambil metrik untuk user_id: {$account->user_id} - {$e->getMessage()}");
+                $this->info("Berhasil ambil metrik dummy untuk user_id: {$account->user_id}");
+                $this->info('Data Metrik Dummy: ' . json_encode($metrics));
             }
         }
     }

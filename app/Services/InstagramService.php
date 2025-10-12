@@ -254,12 +254,12 @@ class InstagramService
         return Metric::updateOrCreate(
             [
                 'social_account_id' => $account->id,
-                'provider' => 'instagram',
+                'provider' => $account->provider,
                 'date' => $date,
             ],
             array_merge($metrics, [
                 'social_account_id' => $account->id,
-                'provider' => 'instagram',
+                'provider' => $account->provider,
                 'date' => $date,
             ])
         );

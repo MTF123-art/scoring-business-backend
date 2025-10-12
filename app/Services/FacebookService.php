@@ -311,12 +311,12 @@ class FacebookService
       return Metric::updateOrCreate(
          [
             'social_account_id' => $account->id,
-            'provider' => 'facebook',
+            'provider' => $account->provider,
             'date' => $date,
          ],
          array_merge($metrics, [
             'social_account_id' => $account->id,
-            'provider' => 'facebook',
+            'provider' => $account->provider,
             'date' => $date,
          ])
       );
