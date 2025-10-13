@@ -13,7 +13,9 @@ RUN apt-get update && apt-get install -y \
     zip \
     unzip \
     nodejs \
-    npm
+    npm \
+    cron \
+    supervisor
 
 # Clear cache
 RUN apt-get clean && rm -rf /var/lib/apt/lists/*
@@ -47,8 +49,16 @@ RUN npm run build
 RUN chown -R www-data:www-data /var/www
 RUN chmod -R 755 /var/www/storage
 
+# Copy Supervisor and Cron configuration files
+COPY supervisord.conf /etc/supervisor/conf.d/supervisord.conf
+COPY laravel-cron /etc/cron.d/laravel-cron
+
+# Give execution rights to the cron job and create log file
+RUN chmod 0644 /etc/cron.d/laravel-cron
+RUN touch /var/log/cron.log && chmod 0644 /var/log/cron.log
+
 # Expose port 80
 EXPOSE 80
 
-# Start Apache
-CMD ["apache2-foreground"]
+# Start Supervisor
+CMD ["/usr/bin/supervisord", "-c", "/etc/supervisor/conf.d/supervisord.conf"]
