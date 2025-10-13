@@ -41,4 +41,38 @@ class ScoreController extends Controller
             return api_error('gagal mengambil score', 500, $e->getMessage());
         }
     }
+
+    public function getLeaderboard(Request $request, $period)
+    {
+        if (!in_array($period, ['daily', 'weekly'])) {
+            return api_error('periode tidak valid. Gunakan daily atau weekly', 400);
+        }
+
+        if ($period === 'daily') {
+            $date = Carbon::today()->toDateString();
+            $leaderboard = Score::whereDate('date', $date)
+                ->orderByDesc('final_score')
+                ->with('user:id,name,avatar_url')
+                ->get();
+        } else {
+            $start = Carbon::now()->startOfWeek();
+            $end = Carbon::today();
+            $leaderboard = Score::selectRaw('business_id, AVG(final_score) as avg_score')
+                ->whereBetween('date', [$start, $end])
+                ->groupBy('business_id')
+                ->orderByDesc('avg_score')
+                ->with(['user:id,name,avatar_url'])
+                ->get();
+        }
+
+        $data = $leaderboard->map(function ($item) use ($period) {
+            return [
+                'name' => $item->user->name ?? null,
+                'score' => $period === 'weekly' ? $item->avg_score : $item->final_score,
+                'avatar_url' => $item->user->avatar_url ?? null,
+            ];
+        });
+
+        return api_success($data, "leaderboard {$period}", 200);
+    }
 }

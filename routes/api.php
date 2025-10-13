@@ -26,6 +26,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/facebook/connect', [FacebookController::class, 'redirectToFacebook']);
     Route::get('/facebook/metrics', [FacebookController::class, 'fetchOrStoreMetrics']);
     Route::get('/score', [ScoreController::class, 'getScore']);
+    Route::get('/leaderboard/{period}', [ScoreController::class, 'getLeaderboard']);
     Route::post('/logout', [AuthController::class, 'logout']);
 });
 
