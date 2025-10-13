@@ -10,5 +10,5 @@ Schedule::command('app:refresh-instagram-tokens')
 
 Schedule::command('app:run-daily-metrics-pipeline')
     ->timezone('Asia/Jakarta')
-    ->everyFiveMinutes()
+    ->dailyAt('00:00')
     ->withoutOverlapping();
