@@ -32,6 +32,6 @@ class SocialAccount extends Model
 
     public function metrics()
     {
-        return $this->hasMany(Metric::class);
+        return $this->hasMany(Metric::class, 'social_account_id');
     }
 }

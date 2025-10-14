@@ -24,6 +24,6 @@ class Metric extends Model
 
     public function socialAccount()
     {
-        return $this->belongsTo(SocialAccount::class);
+        return $this->belongsTo(SocialAccount::class, 'social_account_id');
     }
 }

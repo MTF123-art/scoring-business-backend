@@ -4,6 +4,7 @@ namespace App\Services;
 
 use App\Models\Metric;
 use App\Models\Score;
+use App\Models\SocialAccount;
 use Carbon\Carbon;
 
 class ScoreService
@@ -16,21 +17,27 @@ class ScoreService
          $date = $date->toDateString();
       }
 
-      $igMetric = Metric::where('provider', 'instagram')->orWhere('provider', 'dummy_instagram')
-         ->whereHas('socialAccount', function ($q) use ($businessId) {
-            $q->where('user_id', $businessId);
-         })
+
+      $accountIds = SocialAccount::where('user_id', $businessId)->pluck('id')->all();
+
+      $igMetric = Metric::whereIn('provider', ['instagram', 'dummy_instagram'])
+         ->whereIn('social_account_id', $accountIds)
          ->whereDate('date', $date)
-         ->latest()
+         ->orderByDesc('id')
          ->first();
 
-      $fbMetric = Metric::where('provider', 'facebook')->orWhere('provider', 'dummy_facebook')
-         ->whereHas('socialAccount', function ($q) use ($businessId) {
-            $q->where('user_id', $businessId);
-         })
+      $fbMetric = Metric::whereIn('provider', ['facebook', 'dummy_facebook'])
+         ->whereIn('social_account_id', $accountIds)
          ->whereDate('date', $date)
-         ->latest()
+         ->orderByDesc('id')
          ->first();
+
+      if (app()->runningInConsole()) {
+         echo "\n[DEBUG] User: $businessId\n";
+         echo "Account IDs: " . json_encode($accountIds) . "\n";
+         echo "IG Metric: " . ($igMetric ? json_encode($igMetric->toArray()) : 'null') . "\n";
+         echo "FB Metric: " . ($fbMetric ? json_encode($fbMetric->toArray()) : 'null') . "\n";
+      }
 
       $instagramScore = $igMetric ? $this->scorePlatform($igMetric) : 0;
       $facebookScore = $fbMetric ? $this->scorePlatform($fbMetric) : 0;
