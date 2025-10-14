@@ -50,38 +50,29 @@ class FacebookController extends Controller
         }
     }
 
-    public function handleCallback(Request $request): JsonResponse
+    public function handleCallback(Request $request)
     {
         try {
             $state = $request->query('state');
             $userId = Cache::pull("oauth_state:{$state}");
             if (!$userId) {
-                return api_error('state tidak valid atau kadaluarsa');
+                return view('connected')->with(['message' => 'state tidak valid atau kadaluarsa']);
             }
             try {
                 /** @var \Laravel\Socialite\Two\AbstractProvider $fbDriver */
                 $fbDriver = Socialite::driver('facebook');
                 $facebookUser = $fbDriver->stateless()->user();
             } catch (\Exception $e) {
-                return api_error('gagal mengambil data user facebook', 400, $e->getMessage());
+                return view('connected')->with(['message' => 'Gagal mengambil data user facebook: '.$e->getMessage()]);
             }
             try {
                 $this->facebookService->connectAccount($userId, $facebookUser);
             } catch (\Exception $e) {
-                return api_error('gagal menyimpan akun facebook', 400, $e->getMessage());
+                return view('connected')->with(['message' => 'Gagal menyimpan akun facebook: '.$e->getMessage()]);
             }
-            return api_success(
-                [
-                    'user' => [
-                        'id' => $facebookUser->getId(),
-                        'name' => $facebookUser->getName() ?? $facebookUser->getNickname(),
-                        'avatar' => $facebookUser->getAvatar(),
-                    ],
-                ],
-                'berhasil terhubung dengan akun facebook',
-            );
+            return view('connected')->with(['message' => 'Berhasil terhubung dengan akun facebook']);
         } catch (\Exception $e) {
-            return api_error('gagal terhubung dengan akun facebook', 500, $e->getMessage());
+            return view('connected')->with(['message' => 'Gagal terhubung dengan akun facebook: '.$e->getMessage()]);
         }
     }
 
@@ -93,7 +84,6 @@ class FacebookController extends Controller
                 return api_error('unauthenticated', 401);
             }
 
-            // Temukan akun Facebook milik user
             $account = SocialAccount::where('user_id', $user->id)
                 ->where('provider', 'facebook')
                 ->first();
@@ -103,7 +93,6 @@ class FacebookController extends Controller
 
             $today = now()->toDateString();
 
-            // Cek metric di DB untuk hari ini
             $metric = Metric::where('social_account_id', $account->id)
                 ->where('provider', 'facebook')
                 ->where('date', $today)
@@ -113,7 +102,6 @@ class FacebookController extends Controller
                 return api_success($metric->toArray(), 'data metric facebook (cached)');
             }
 
-            // Ambil dari service lalu simpan
             try {
                 $data = $this->facebookService->getMetrics($account);
             } catch (\Exception $e) {
@@ -129,6 +117,29 @@ class FacebookController extends Controller
             return api_success($metric->toArray(), 'berhasil mengambil & menyimpan metric facebook');
         } catch (\Exception $e) {
             return api_error('terjadi kesalahan saat mengambil metric facebook', 500, $e->getMessage());
+        }
+    }
+
+    public function isConnected(Request $request): JsonResponse
+    {
+        try {
+            $user = $request->user();
+            if (!$user) {
+                return api_error('unauthenticated', 401);
+            }
+
+            $account = SocialAccount::where('user_id', $user->id)
+                ->where('provider', 'facebook')
+                ->first();
+
+            return api_success(
+                [
+                    'connected' => $account ? true : false,
+                ],
+                'status koneksi facebook berhasil diambil',
+            );
+        } catch (\Exception $e) {
+            return api_error('gagal mengambil status koneksi facebook', 500, $e->getMessage());
         }
     }
 

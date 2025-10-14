@@ -50,39 +50,29 @@ class InstagramController extends Controller
         }
     }
 
-    public function handleCallback(Request $request): JsonResponse
+    public function handleCallback(Request $request)
     {
         try {
             $state = $request->query('state');
             $userId = Cache::pull("oauth_state:{$state}");
             if (!$userId) {
-                return api_error('state tidak valid atau kadaluarsa');
+                return view('connected')->with(['message' => 'state tidak valid atau kadaluarsa']);
             }
             try {
                 /** @var \Laravel\Socialite\Two\AbstractProvider $igDriver */
                 $igDriver = Socialite::driver('instagram');
                 $instagramUser = $igDriver->stateless()->user();
             } catch (\Exception $e) {
-                return api_error('gagal mengambil data user instagram', 400, $e->getMessage());
+                return view('connected')->with(['message' => 'Gagal mengambil data user instagram: '.$e->getMessage()]);
             }
             try {
                 $this->instagramService->connectAccount($userId, $instagramUser);
             } catch (\Exception $e) {
-                return api_error('gagal menyimpan akun instagram', 400, $e->getMessage());
+                return view('connected')->with(['message' => 'Gagal menyimpan akun instagram: '.$e->getMessage()]);
             }
-            return api_success(
-                [
-                    'user' => [
-                        'id' => $instagramUser->getId(),
-                        'name' => $instagramUser->getName() ?? $instagramUser->getNickname(),
-                        'avatar' => $instagramUser->getAvatar(),
-                        'account_type' => $instagramUser->account_type,
-                    ],
-                ],
-                'berhasil terhubung dengan akun instagram',
-            );
+            return view('connected')->with(['message' => 'Berhasil terhubung dengan akun instagram']);
         } catch (\Exception $e) {
-            return api_error('gagal terhubung dengan akun instagram', 500, $e->getMessage());
+            return view('connected')->with(['message' => 'Gagal terhubung dengan akun instagram: '.$e->getMessage()]);
         }
     }
 
@@ -130,6 +120,29 @@ class InstagramController extends Controller
             return api_success($metric->toArray(), 'berhasil mengambil & menyimpan metric instagram');
         } catch (\Exception $e) {
             return api_error('terjadi kesalahan saat mengambil metric instagram', 500, $e->getMessage());
+        }
+    }
+
+    public function isConnected(Request $request): JsonResponse
+    {
+        try {
+            $user = $request->user();
+            if (!$user) {
+                return api_error('unauthenticated', 401);
+            }
+
+            $account = SocialAccount::where('user_id', $user->id)
+                ->where('provider', 'instagram')
+                ->first();
+
+            return api_success(
+                [
+                    'connected' => $account ? true : false,
+                ],
+                'status koneksi instagram berhasil diambil',
+            );
+        } catch (\Exception $e) {
+            return api_error('gagal mengambil status koneksi instagram', 500, $e->getMessage());
         }
     }
 
