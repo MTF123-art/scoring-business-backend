@@ -19,10 +19,8 @@
 		<div class="status"><b>Inscore</b></div>
 		<div class="msg">{{ $message ?? 'Status tidak diketahui.' }}</div>
 		<div class="instruksi">
-			Silakan kembali ke aplikasi dan lakukan <b>refresh</b> pada halaman.<br>
-			Jika halaman ini tidak menutup otomatis, Anda bisa menutup tab ini secara manual.
+			Silakan kembali ke aplikasi dan lakukan <b>refresh</b> pada halaman aplikasi.<br>
 		</div>
-		<button class="refresh" onclick="window.close()">Tutup Halaman</button>
 	</div>
 </body>
 </html>
