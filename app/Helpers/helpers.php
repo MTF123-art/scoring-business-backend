@@ -19,3 +19,12 @@ if (!function_exists('api_error')) {
         ], $status);
     }
 }
+
+if (!function_exists('user_avatar_url')) {
+    function user_avatar_url($user) {
+        if (!$user || !$user->avatar_url) {
+            return null;
+        }
+        return url('/api/user/avatar/' . $user->id);
+    }
+}

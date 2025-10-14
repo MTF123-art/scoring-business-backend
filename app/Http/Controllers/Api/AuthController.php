@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Storage;
 
 class AuthController extends Controller
 {
@@ -63,5 +64,99 @@ class AuthController extends Controller
         } catch (\Exception $e) {
             return api_error('Terjadi kesalahan saat logout', 500, $e->getMessage());
         }
+    }
+
+    public function getProfile(Request $request)
+    {
+        try {
+            $user = $request->user();
+            if (!$user) {
+                return api_error('unauthenticated', 401);
+            }
+            $profile = $user->toArray();
+            $profile['avatar_url'] = user_avatar_url($user);
+            return api_success($profile, 'profil berhasil diambil');
+        } catch (\Exception $e) {
+            return api_error('gagal mengambil profil', 500, $e->getMessage());
+        }
+    }
+
+    public function updateProfile(Request $request)
+    {
+        try {
+            $user = $request->user();
+            if (!$user) {
+                return api_error('unauthenticated', 401);
+            }
+
+            $request->validate([
+                'name' => 'sometimes|required|string|max:255',
+                'email' => 'sometimes|required|string|email|max:255|unique:users,email,' . $user->id,
+                'avatar' => 'sometimes|file|image|max:2048',
+            ]);
+
+            if ($request->has('name')) {
+                $user->name = $request->name;
+            }
+            if ($request->has('email')) {
+                $user->email = $request->email;
+            }
+            if ($request->hasFile('avatar')) {
+                if ($user->avatar_url && Storage::disk('private')->exists($user->avatar_url)) {
+                    Storage::disk('private')->delete($user->avatar_url);
+                }
+                $file = $request->file('avatar');
+                $filename = 'user_' . $user->id . '_' . uniqid() . '.' . $file->getClientOriginalExtension();
+                $path = $file->storeAs('avatars', $filename, 'private');
+                $user->avatar_url = $path;
+            }
+
+            $user->save();
+
+            $profile = $user->toArray();
+            $profile['avatar_url'] = user_avatar_url($user);
+            return api_success($profile, 'profil berhasil diperbarui');
+        } catch (\Exception $e) {
+            return api_error('gagal memperbarui profil', 500, $e->getMessage());
+        }
+    }
+
+    public function changePassword(Request $request)
+    {
+        try {
+            $user = $request->user();
+            if (!$user) {
+                return api_error('unauthenticated', 401);
+            }
+
+            $request->validate([
+                'current_password' => 'required',
+                'new_password' => 'required|string|min:6|confirmed',
+            ]);
+
+            if (!Hash::check($request->current_password, $user->password)) {
+                return api_error('password saat ini salah');
+            }
+
+            $user->password = Hash::make($request->new_password);
+            $user->save();
+
+            return api_success(null, 'password berhasil diubah');
+        } catch (\Exception $e) {
+            return api_error('gagal mengubah password', 500, $e->getMessage());
+        }
+    }
+
+    public function getAvatarById($id)
+    {
+        $user = User::find($id);
+        if (!$user || !$user->avatar_url) {
+            abort(404);
+        }
+        $path = storage_path('app/private/' . $user->avatar_url);
+        if (!file_exists($path)) {
+            abort(404);
+        }
+        return response()->file($path);
     }
 }

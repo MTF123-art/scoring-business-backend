@@ -28,6 +28,14 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('/score', [ScoreController::class, 'getScore']);
     Route::get('/leaderboard/{period}', [ScoreController::class, 'getLeaderboard']);
     Route::post('/logout', [AuthController::class, 'logout']);
+
+    Route::prefix('profile')->group(function () {
+        Route::get('/', [AuthController::class, 'getProfile']);
+        Route::put('/', [AuthController::class, 'updateProfile']);
+        Route::post('/change-password', [AuthController::class, 'changePassword']);
+    });
+
+    Route::get('/user/avatar/{id}', [AuthController::class, 'getAvatarById']);
 });
 
 Route::get('/instagram/callback', [InstagramController::class, 'handleCallback']);

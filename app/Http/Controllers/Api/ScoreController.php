@@ -69,7 +69,7 @@ class ScoreController extends Controller
             return [
                 'name' => $item->user->name ?? null,
                 'score' => $period === 'weekly' ? $item->avg_score : $item->final_score,
-                'avatar_url' => $item->user->avatar_url ?? null,
+                'avatar_url' => isset($item->user) ? user_avatar_url($item->user) : null,
             ];
         });
 
