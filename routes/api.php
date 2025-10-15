@@ -21,12 +21,22 @@ Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
 
 Route::middleware('auth:sanctum')->group(function () {
-    Route::get('/instagram/connect', [InstagramController::class, 'redirectToInstagram']);
-    Route::get('/instagram/metrics', [InstagramController::class, 'fetchOrStoreMetrics']);
-    Route::get('/facebook/connect', [FacebookController::class, 'redirectToFacebook']);
-    Route::get('/facebook/metrics', [FacebookController::class, 'fetchOrStoreMetrics']);
+
+    Route::prefix('instagram')->group(function () {
+        Route::get('/connect', [InstagramController::class, 'redirectToInstagram']);
+        Route::get('/metrics', [InstagramController::class, 'fetchOrStoreMetrics']);
+        Route::delete('/disconnect', [InstagramController::class, 'disconnectInstagram']);
+    });
+
+    Route::prefix('facebook')->group(function () {
+        Route::get('/connect', [FacebookController::class, 'redirectToFacebook']);
+        Route::get('/metrics', [FacebookController::class, 'fetchOrStoreMetrics']);
+        Route::delete('/disconnect', [FacebookController::class, 'disconnectFacebook']);
+    });
+
     Route::get('/score', [ScoreController::class, 'getScore']);
     Route::get('/leaderboard/{period}', [ScoreController::class, 'getLeaderboard']);
+
     Route::post('/logout', [AuthController::class, 'logout']);
 
     Route::prefix('profile')->group(function () {

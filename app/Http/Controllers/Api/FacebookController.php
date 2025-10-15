@@ -63,16 +63,16 @@ class FacebookController extends Controller
                 $fbDriver = Socialite::driver('facebook');
                 $facebookUser = $fbDriver->stateless()->user();
             } catch (\Exception $e) {
-                return view('connected')->with(['message' => 'Gagal mengambil data user facebook: '.$e->getMessage()]);
+                return view('connected')->with(['message' => 'Gagal mengambil data user facebook: ' . $e->getMessage()]);
             }
             try {
                 $this->facebookService->connectAccount($userId, $facebookUser);
             } catch (\Exception $e) {
-                return view('connected')->with(['message' => 'Gagal menyimpan akun facebook: '.$e->getMessage()]);
+                return view('connected')->with(['message' => 'Gagal menyimpan akun facebook: ' . $e->getMessage()]);
             }
             return view('connected')->with(['message' => 'Berhasil terhubung dengan akun facebook']);
         } catch (\Exception $e) {
-            return view('connected')->with(['message' => 'Gagal terhubung dengan akun facebook: '.$e->getMessage()]);
+            return view('connected')->with(['message' => 'Gagal terhubung dengan akun facebook: ' . $e->getMessage()]);
         }
     }
 
@@ -126,4 +126,23 @@ class FacebookController extends Controller
         }
     }
 
+    public function disconnectFacebook(Request $request)
+    {
+        $user = $request->user();
+        if (!$user) {
+            return api_error('unauthenticated', 401);
+        }
+
+        $account = SocialAccount::where('user_id', $user->id)
+            ->where('provider', 'facebook')
+            ->first();
+
+        if (!$account) {
+            return api_error('akun facebook belum terhubung', 404);
+        }
+
+        $account->delete();
+
+        return api_success(null, 'akun facebook berhasil diputuskan');
+    }
 }

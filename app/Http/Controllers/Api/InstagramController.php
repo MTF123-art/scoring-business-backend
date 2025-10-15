@@ -63,16 +63,16 @@ class InstagramController extends Controller
                 $igDriver = Socialite::driver('instagram');
                 $instagramUser = $igDriver->stateless()->user();
             } catch (\Exception $e) {
-                return view('connected')->with(['message' => 'Gagal mengambil data user instagram: '.$e->getMessage()]);
+                return view('connected')->with(['message' => 'Gagal mengambil data user instagram: ' . $e->getMessage()]);
             }
             try {
                 $this->instagramService->connectAccount($userId, $instagramUser);
             } catch (\Exception $e) {
-                return view('connected')->with(['message' => 'Gagal menyimpan akun instagram: '.$e->getMessage()]);
+                return view('connected')->with(['message' => 'Gagal menyimpan akun instagram: ' . $e->getMessage()]);
             }
             return view('connected')->with(['message' => 'Berhasil terhubung dengan akun instagram']);
         } catch (\Exception $e) {
-            return view('connected')->with(['message' => 'Gagal terhubung dengan akun instagram: '.$e->getMessage()]);
+            return view('connected')->with(['message' => 'Gagal terhubung dengan akun instagram: ' . $e->getMessage()]);
         }
     }
 
@@ -126,4 +126,23 @@ class InstagramController extends Controller
         }
     }
 
+    public function disconnectInstagram(Request $request)
+    {
+        $user = $request->user();
+        if (!$user) {
+            return api_error('unauthenticated', 401);
+        }
+
+        $account = SocialAccount::where('user_id', $user->id)
+            ->where('provider', 'instagram')
+            ->first();
+
+        if (!$account) {
+            return api_error('akun instagram belum terhubung', 404);
+        }
+
+        $account->delete();
+
+        return api_success(null, 'akun instagram berhasil diputuskan');
+    }
 }
