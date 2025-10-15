@@ -84,7 +84,6 @@ class InstagramController extends Controller
                 return api_error('unauthenticated', 401);
             }
 
-            // Temukan akun Instagram milik user
             $account = SocialAccount::where('user_id', $user->id)
                 ->where('provider', 'instagram')
                 ->first();
@@ -94,17 +93,18 @@ class InstagramController extends Controller
 
             $today = now()->toDateString();
 
-            // Cek metric di DB untuk hari ini
             $metric = Metric::where('social_account_id', $account->id)
                 ->where('provider', 'instagram')
                 ->where('date', $today)
                 ->first();
 
+            $metric = $metric->toArray();
+            $metric['username'] = $account->name;
+
             if ($metric) {
-                return api_success($metric->toArray(), 'data metric instagram (cached)');
+                return api_success($metric, 'data metric instagram (cached)');
             }
 
-            // Ambil dari service lalu simpan
             try {
                 $data = $this->instagramService->getMetrics($account);
             } catch (\Exception $e) {
@@ -117,32 +117,12 @@ class InstagramController extends Controller
                 return api_error('gagal menyimpan metric instagram', 500, $e->getMessage());
             }
 
-            return api_success($metric->toArray(), 'berhasil mengambil & menyimpan metric instagram');
+            $metric = $metric->toArray();
+            $metric['username'] = $account->name;
+
+            return api_success($metric, 'berhasil mengambil & menyimpan metric instagram');
         } catch (\Exception $e) {
             return api_error('terjadi kesalahan saat mengambil metric instagram', 500, $e->getMessage());
-        }
-    }
-
-    public function isConnected(Request $request): JsonResponse
-    {
-        try {
-            $user = $request->user();
-            if (!$user) {
-                return api_error('unauthenticated', 401);
-            }
-
-            $account = SocialAccount::where('user_id', $user->id)
-                ->where('provider', 'instagram')
-                ->first();
-
-            return api_success(
-                [
-                    'connected' => $account ? true : false,
-                ],
-                'status koneksi instagram berhasil diambil',
-            );
-        } catch (\Exception $e) {
-            return api_error('gagal mengambil status koneksi instagram', 500, $e->getMessage());
         }
     }
 

@@ -23,10 +23,8 @@ Route::post('/login', [AuthController::class, 'login']);
 Route::middleware('auth:sanctum')->group(function () {
     Route::get('/instagram/connect', [InstagramController::class, 'redirectToInstagram']);
     Route::get('/instagram/metrics', [InstagramController::class, 'fetchOrStoreMetrics']);
-    Route::get('/instagram/status', [InstagramController::class, 'isConnected']);
     Route::get('/facebook/connect', [FacebookController::class, 'redirectToFacebook']);
     Route::get('/facebook/metrics', [FacebookController::class, 'fetchOrStoreMetrics']);
-    Route::get('/facebook/status', [FacebookController::class, 'isConnected']);
     Route::get('/score', [ScoreController::class, 'getScore']);
     Route::get('/leaderboard/{period}', [ScoreController::class, 'getLeaderboard']);
     Route::post('/logout', [AuthController::class, 'logout']);

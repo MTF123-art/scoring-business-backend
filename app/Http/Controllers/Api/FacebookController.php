@@ -98,8 +98,11 @@ class FacebookController extends Controller
                 ->where('date', $today)
                 ->first();
 
+            $metric = $metric->toArray();
+            $metric['username'] = $account->name;
+
             if ($metric) {
-                return api_success($metric->toArray(), 'data metric facebook (cached)');
+                return api_success($metric, 'data metric facebook (cached)');
             }
 
             try {
@@ -114,32 +117,12 @@ class FacebookController extends Controller
                 return api_error('gagal menyimpan metric facebook', 500, $e->getMessage());
             }
 
-            return api_success($metric->toArray(), 'berhasil mengambil & menyimpan metric facebook');
+            $metric = $metric->toArray();
+            $metric['username'] = $account->name;
+
+            return api_success($metric, 'berhasil mengambil & menyimpan metric facebook');
         } catch (\Exception $e) {
             return api_error('terjadi kesalahan saat mengambil metric facebook', 500, $e->getMessage());
-        }
-    }
-
-    public function isConnected(Request $request): JsonResponse
-    {
-        try {
-            $user = $request->user();
-            if (!$user) {
-                return api_error('unauthenticated', 401);
-            }
-
-            $account = SocialAccount::where('user_id', $user->id)
-                ->where('provider', 'facebook')
-                ->first();
-
-            return api_success(
-                [
-                    'connected' => $account ? true : false,
-                ],
-                'status koneksi facebook berhasil diambil',
-            );
-        } catch (\Exception $e) {
-            return api_error('gagal mengambil status koneksi facebook', 500, $e->getMessage());
         }
     }
 
