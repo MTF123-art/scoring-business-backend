@@ -2,6 +2,7 @@
 
 use App\Http\Controllers\Api\AuthController;
 use App\Http\Controllers\Api\FacebookController;
+use App\Http\Controllers\Api\HomeController;
 use App\Http\Controllers\Api\InstagramController;
 use App\Http\Controllers\Api\ProfileController;
 use App\Http\Controllers\Api\ScoreController;
@@ -16,6 +17,7 @@ Route::post('/register', [AuthController::class, 'register']);
 Route::post('/login', [AuthController::class, 'login']);
 
 Route::middleware('auth:sanctum')->group(function () {
+    Route::get('/home', [HomeController::class, 'index']);
 
     Route::prefix('instagram')->group(function () {
         Route::get('/connect', [InstagramController::class, 'redirectToInstagram']);
@@ -39,7 +41,6 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('/', [ProfileController::class, 'updateProfile']);
         Route::post('/change-password', [ProfileController::class, 'changePassword']);
     });
-
 });
 Route::get('/user/avatar/{id}', [ProfileController::class, 'getAvatarById']);
 
