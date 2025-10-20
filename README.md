@@ -1,61 +1,297 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# Scoring Business Backend – API Documentation
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+This document describes all available API endpoints, their authentication requirements, request/response formats, and example payloads.
 
-## About Laravel
+## Authentication
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+Most endpoints require authentication using Laravel Sanctum.
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+-   Obtain a token via `/api/login`.
+-   Send the token in the `Authorization` header: `Bearer <token>`.
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+Standard JSON envelope:
 
-## Learning Laravel
+-   Success: `{ "success": true, "data": <payload>, "message": "..." }`
+-   Error: `{ "success": false, "message": "...", "error": "(optional details)" }`
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+---
 
-You may also try the [Laravel Bootcamp](https://bootcamp.laravel.com), where you will be guided through building a modern Laravel application from scratch.
+## Endpoints
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+### 1) Home Screen Data
 
-## Laravel Sponsors
+GET `/api/home` (Auth required)
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+Returns aggregated data for the mobile home screen: today score, rank, platform connections, weekly comparison, and daily score series from start-of-week to today.
 
-### Premium Partners
+Response example:
 
-- **[Vehikl](https://vehikl.com)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Redberry](https://redberry.international/laravel-development)**
-- **[Active Logic](https://activelogic.com)**
+```json
+{
+    "success": true,
+    "data": {
+        "user": { "id": 123, "name": "Linkebin" },
+        "generatedAt": "2025-10-20T07:30:00Z",
+        "platforms": [
+            {
+                "platform": "instagram",
+                "connected": true,
+                "account": "@brand.ig"
+            },
+            { "platform": "facebook", "connected": false, "account": null }
+        ],
+        "today": {
+            "score": 97,
+            "perPlatform": [
+                { "platform": "instagram", "score": 70 },
+                { "platform": "facebook", "score": 80 }
+            ],
+            "rank": { "position": 12, "total": 100 }
+        },
+        "weeklyComparison": {
+            "lastWeekAvgScore": 87,
+            "thisWeekAvgScore": 93,
+            "deltaPercent": 5.6
+        },
+        "charts": {
+            "dailyScoreSeries": [
+                { "date": "2025-10-14", "value": 90 },
+                { "date": "2025-10-15", "value": 97 }
+            ]
+        }
+    },
+    "message": "home"
+}
+```
 
-## Contributing
+---
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+### 2) Register
 
-## Code of Conduct
+POST `/api/register`
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+Body (JSON):
 
-## Security Vulnerabilities
+```json
+{
+    "name": "John",
+    "email": "john@example.com",
+    "password": "secret",
+    "password_confirmation": "secret"
+}
+```
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+Responses:
 
-## License
+-   200 success: `{ "success": true, "data": { "user": { ... } }, "message": "pendaftaran berhasil" }`
+-   422 validation error or 500 on server error
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+---
+
+### 3) Login
+
+POST `/api/login`
+
+Body (JSON):
+
+```json
+{ "email": "john@example.com", "password": "secret" }
+```
+
+Responses:
+
+-   200 success: `{ "success": true, "data": { "user": { ... }, "sanctum_token": "<token>" }, "message": "login berhasil" }`
+-   400/401 invalid credentials; 422 validation error
+
+---
+
+### 4) Logout
+
+POST `/api/logout` (Auth required)
+
+Response: `{ "success": true, "data": null, "message": "logout berhasil" }`
+
+---
+
+### 5) Get Today Score
+
+GET `/api/score` (Auth required)
+
+Returns today’s `Score` for the current user. If missing, it will be calculated.
+
+Response example:
+
+```json
+{
+    "success": true,
+    "data": {
+        "business_id": 123,
+        "date": "2025-10-20",
+        "instagram_score": 70,
+        "facebook_score": 80,
+        "final_score": 97
+    },
+    "message": "score (cached) | score berhasil dihitung"
+}
+```
+
+---
+
+### 6) Leaderboard
+
+GET `/api/leaderboard/{period}` (Auth required)
+
+Path params:
+
+-   `period`: `daily` or `weekly`
+
+Behavior:
+
+-   `daily`: orders by today’s `final_score`.
+-   `weekly`: averages `final_score` from start-of-week to today and orders by average.
+
+Response example:
+
+```json
+{
+    "success": true,
+    "data": [
+        { "name": "Alice", "score": 98.5, "avatar_url": "https://..." },
+        { "name": "Bob", "score": 95.0, "avatar_url": null }
+    ],
+    "message": "leaderboard weekly"
+}
+```
+
+Errors:
+
+-   400 if `period` is not one of `daily` or `weekly`.
+
+---
+
+### 7) Instagram
+
+GET `/api/instagram/connect` (Auth required)
+
+-   Returns a URL for OAuth login.
+
+```json
+{
+    "success": true,
+    "data": { "url": "https://facebook.com/..." },
+    "message": "url login instagram berhasil dibuat"
+}
+```
+
+GET `/api/instagram/callback`
+
+-   Handles the OAuth callback; returns an HTML page indicating connection result.
+
+GET `/api/instagram/metrics` (Auth required)
+
+-   Fetches or stores today’s metrics for the connected Instagram account.
+
+```json
+{
+    "success": true,
+    "data": { "followers": 1000, "...": 0 },
+    "message": "data metric instagram (cached) | berhasil mengambil & menyimpan metric instagram"
+}
+```
+
+DELETE `/api/instagram/disconnect` (Auth required)
+
+-   Disconnects the current user’s Instagram account.
+
+```json
+{
+    "success": true,
+    "data": null,
+    "message": "akun instagram berhasil diputuskan"
+}
+```
+
+---
+
+### 8) Facebook
+
+GET `/api/facebook/connect` (Auth required)
+
+-   Returns a URL for OAuth login.
+
+GET `/api/facebook/callback`
+
+-   Handles the OAuth callback; returns an HTML page indicating connection result.
+
+GET `/api/facebook/metrics` (Auth required)
+
+-   Fetches or stores today’s metrics for the connected Facebook Page.
+
+DELETE `/api/facebook/disconnect` (Auth required)
+
+-   Disconnects the current user’s Facebook account.
+
+```json
+{
+    "success": true,
+    "data": null,
+    "message": "akun facebook berhasil diputuskan"
+}
+```
+
+---
+
+### 9) Profile
+
+GET `/api/profile` (Auth required)
+
+-   Returns user profile; includes `avatar_url` via helper `user_avatar_url()`.
+
+POST `/api/profile` (Auth required)
+
+-   Multipart/form-data supported for `avatar`.
+-   Fields (all optional): `name`, `email`, `avatar`(image)
+
+```bash
+Content-Type: multipart/form-data
+```
+
+Response: `{ "success": true, "data": { ...user }, "message": "profil berhasil diperbarui" }`
+
+POST `/api/profile/change-password` (Auth required)
+
+-   Body (JSON): `{ "current_password": "...", "new_password": "...", "new_password_confirmation": "..." }`
+
+```json
+{ "success": true, "data": null, "message": "password berhasil diubah" }
+```
+
+GET `/api/user/avatar/{id}`
+
+-   Returns the avatar image file for a user id. Responds with 404 if not found.
+
+---
+
+## Scoring
+
+Formula used for platform scoring:
+
+```
+score = 0.4*ER + 0.3*RR + 0.3*EPP
+```
+
+Normalized ranges:
+
+-   ER: 0..10
+-   RR: 0..5
+-   EPP: 0..500
+
+Final daily score is the average of platform scores (Instagram, Facebook).
+
+---
+
+## Conventions
+
+-   All timestamps in responses are ISO 8601 (UTC) unless noted.
+-   Week boundaries use Laravel/Carbon `startOfWeek()` based on app timezone.
+-   Error responses may include an additional `error` detail string for debugging.
