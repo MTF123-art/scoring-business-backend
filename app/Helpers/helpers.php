@@ -15,7 +15,7 @@ if (!function_exists('api_error')) {
         return response()->json([
             'success' => false,
             'message' => $message,
-            'errors'  => $errors,
+            'error'  => $errors,
         ], $status);
     }
 }
