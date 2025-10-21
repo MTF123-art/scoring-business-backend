@@ -3,9 +3,11 @@
 namespace App\Http\Controllers\Api;
 
 use App\Http\Controllers\Controller;
+use App\Mail\PasswordResetMail;
 use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
+use Illuminate\Support\Facades\Mail;
 
 class AuthController extends Controller
 {
@@ -65,4 +67,38 @@ class AuthController extends Controller
         }
     }
 
+    public function resetPassword(Request $request)
+    {
+        try {
+            $request->validate([
+                'email' => 'required|email',
+            ]);
+
+            $user = User::where('email', $request->email)->first();
+
+            if (!$user) {
+                return api_error('User dengan email tersebut tidak ditemukan', 404, null);
+            }
+
+            $tempPassword = $this->generateTempPassword(8);
+            $user->password = Hash::make($tempPassword);
+            $user->save();
+
+            Mail::to($user->email)->send(new PasswordResetMail($user->name, $tempPassword));
+
+            return api_success(null, 'Password sementara telah dikirim ke email Anda');
+        } catch (\Exception $e) {
+            return api_error('Terjadi kesalahan saat mereset password', 500, $e->getMessage());
+        }
+    }
+
+    private function generateTempPassword($length = 8)
+    {
+        $chars = 'ABCDEFGHJKLMNPQRSTUVWXYZabcdefghjkmnpqrstuvwxyz23456789';
+        $password = '';
+        for ($i = 0; $i < $length; $i++) {
+            $password .= $chars[random_int(0, strlen($chars) - 1)];
+        }
+        return $password;
+    }
 }
