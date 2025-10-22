@@ -8,6 +8,7 @@ use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Log;
 use Illuminate\Support\Facades\Storage;
+use Illuminate\Validation\ValidationException;
 
 class ProfileController extends Controller
 {
@@ -21,6 +22,8 @@ class ProfileController extends Controller
             $profile = $user->toArray();
             $profile['avatar_url'] = user_avatar_url($user);
             return api_success($profile, 'profil berhasil diambil');
+        } catch (ValidationException $e) {
+            return api_error('validasi gagal', 422, $e->errors());
         } catch (\Exception $e) {
             return api_error('gagal mengambil profil', 500, $e->getMessage());
         }
@@ -75,6 +78,8 @@ class ProfileController extends Controller
             $profile = $user->toArray();
             $profile['avatar_url'] = user_avatar_url($user);
             return api_success($profile, 'profil berhasil diperbarui');
+        } catch (ValidationException $e) {
+            return api_error('validasi gagal', 422, $e->errors());
         } catch (\Exception $e) {
             Log::error('updateProfile error', ['message' => $e->getMessage()]);
             return api_error('gagal memperbarui profil', 500, $e->getMessage());
@@ -95,13 +100,15 @@ class ProfileController extends Controller
             ]);
 
             if (!Hash::check($request->current_password, $user->password)) {
-                return api_error('password saat ini salah');
+                return api_error('password saat ini salah', 400);
             }
 
             $user->password = Hash::make($request->new_password);
             $user->save();
 
             return api_success(null, 'password berhasil diubah');
+        } catch (ValidationException $e) {
+            return api_error('validasi gagal', 422, $e->errors());
         } catch (\Exception $e) {
             return api_error('gagal mengubah password', 500, $e->getMessage());
         }
