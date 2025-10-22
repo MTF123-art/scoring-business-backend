@@ -8,6 +8,7 @@ use App\Models\User;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Support\Facades\Mail;
+use Illuminate\Validation\ValidationException;
 
 class AuthController extends Controller
 {
@@ -26,7 +27,9 @@ class AuthController extends Controller
                 'password' => Hash::make($request->password),
             ]);
 
-            return api_success(['user' => $user], 'pendaftaran berhasil');
+            return api_success(['user' => $user], 'pendaftaran berhasil', 201);
+        } catch (ValidationException $e) {
+            return api_error('Validasi gagal', 422, $e->errors());
         } catch (\Exception $e) {
             return api_error('Terjadi kesalahan saat pendaftaran', 500, $e->getMessage());
         }
@@ -43,7 +46,7 @@ class AuthController extends Controller
             $user = User::where('email', $request->email)->first();
 
             if (!$user || !Hash::check($request->password, $user->password)) {
-                return api_error('email atau password salah');
+                return api_error('email atau password salah', 401);
             }
 
             $token = $user->createToken('mobile-app-token')->plainTextToken;
@@ -52,6 +55,8 @@ class AuthController extends Controller
                 'user' => $user,
                 'sanctum_token' => $token,
             ], 'login berhasil');
+        } catch (ValidationException $e) {
+            return api_error('Validasi gagal', 422, $e->errors());
         } catch (\Exception $e) {
             return api_error('Terjadi kesalahan saat login', 500, $e->getMessage());
         }
@@ -87,6 +92,8 @@ class AuthController extends Controller
             Mail::to($user->email)->send(new PasswordResetMail($user->name, $tempPassword));
 
             return api_success(null, 'Password sementara telah dikirim ke email Anda');
+        } catch (ValidationException $e) {
+            return api_error('Validasi gagal', 422, $e->errors());
         } catch (\Exception $e) {
             return api_error('Terjadi kesalahan saat mereset password', 500, $e->getMessage());
         }
