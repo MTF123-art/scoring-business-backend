@@ -37,19 +37,19 @@
 	<p class="muted">
 		Inscore membantu UMKM menilai dan menampilkan kredibilitas bisnis berbasis aset non‑fisik dan metrik
 		digital. Hubungkan akun sosial Anda, dapatkan skor yang transparan, dan gunakan hasilnya sebagai
-		bukti performa untuk meyakinkan calon investor.
+		bukti performa untuk dan kredibilitas bisnis anda.
 	</p>
 
 	<div class="card" style="margin-top:12px;"> 
 		<p><strong>Tentang Aplikasi Inscore</strong></p>
 		<p>
-			Inscore adalah aplikasi penilaian bisnis berbasis Flutter dengan backend Laravel untuk membantu
+			Inscore adalah aplikasi penilaian bisnis untuk membantu
 			UMKM — khususnya pelaku usaha kreatif — membuktikan kredibilitas dan potensi pertumbuhan mereka.
 			Berbeda dari platform penilaian konvensional, Inscore mengevaluasi <em>aset non-fisik</em> dan metrik digital
 			seperti performa media sosial, interaksi pelanggan, dan portofolio digital.
 		</p>
 		<ul>
-			<li>Menjembatani kesenjangan akses pendanaan bagi UMKM yang minim agunan fisik.</li>
+			<li>Menjembatani kesenjangan akses pendanaan bagi UMKM yang minim bagunan fisik.</li>
 			<li>Mengukur metrik sosial (followers, engagement, reach) dan menurunkannya menjadi skor holistik.</li>
 			<li>Menyediakan dashboard performa dan leaderboard untuk transparansi dan pembelajaran.</li>
 			<li>Mendorong inklusi keuangan dengan bukti data yang dapat diverifikasi.</li>
@@ -72,7 +72,7 @@
 	</div>
 
 	<p class="muted" style="margin-top:16px;">
-		Kontak: <a href="mailto:team.inscore@gmail.com">team.inscore@gmail.com</a>
+		<a href="mailto:team.inscore@gmail.com">team.inscore@gmail.com</a>
 		&nbsp;•&nbsp;
 		<a href="/privacy">Kebijakan Privasi</a>
 	</p>

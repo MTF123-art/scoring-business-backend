@@ -12,7 +12,6 @@ class ScoreService
    public function calculateForBusiness($businessId, $date = null)
    {
       $date = $date ?? Carbon::today();
-      // Pastikan format tanggal konsisten (Y-m-d)
       if ($date instanceof Carbon) {
          $date = $date->toDateString();
       }

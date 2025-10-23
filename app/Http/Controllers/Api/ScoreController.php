@@ -27,14 +27,6 @@ class ScoreController extends Controller
 
             $date = Carbon::today()->toDateString();
 
-            $score = Score::where('business_id', $user->id)
-                ->whereDate('date', $date)
-                ->first();
-
-            if ($score) {
-                return api_success($score->toArray(), 'score (cached)');
-            }
-
             $score = $this->scoreService->calculateForBusiness($user->id, $date);
             return api_success($score->toArray(), 'score berhasil dihitung');
         } catch (\Exception $e) {
