@@ -21,6 +21,8 @@
 		.link-btn { display:inline-block; padding:8px 12px; border:1px solid #e5e7eb; border-radius:8px; background:#fff; font-size:14px; }
 		.primary-btn { display:inline-block; padding:10px 14px; border-radius:8px; background:#2563eb; color:#fff; border:1px solid #1d4ed8; font-size:14px; }
 		.primary-btn:hover { background:#1d4ed8; text-decoration: none; }
+		.disabled-btn { display:inline-block; padding:10px 14px; border-radius:8px; background:#9ca3af; color:#fff; border:1px solid #9ca3af; font-size:14px; cursor:not-allowed; }
+		.disabled-btn:hover { text-decoration: none; }
 		.btn-row { display:flex; gap:12px; flex-wrap:wrap; margin-top:10px; }
 		.badge { display:inline-block; padding:2px 8px; font-size:12px; border:1px solid #e5e7eb; border-radius:999px; color:#6b7280; background:#fff; }
 	</style>
@@ -31,9 +33,14 @@
 		<img src="{{ asset('Logo Inscore.png') }}" alt="Logo Inscore">
 	</div>
 	<h1>Selamat Datang di <span class="brand">Inscore</span></h1>
-	<p class="muted">Backend layanan sudah berjalan. Gunakan API yang tersedia atau hubungkan akun sosial Anda melalui aplikasi klien.</p>
 
-	<div class="card" style="margin-top:12px;">
+	<p class="muted">
+		Inscore membantu UMKM menilai dan menampilkan kredibilitas bisnis berbasis aset non‑fisik dan metrik
+		digital. Hubungkan akun sosial Anda, dapatkan skor yang transparan, dan gunakan hasilnya sebagai
+		bukti performa untuk meyakinkan calon investor.
+	</p>
+
+	<div class="card" style="margin-top:12px;"> 
 		<p><strong>Tentang Aplikasi Inscore</strong></p>
 		<p>
 			Inscore adalah aplikasi penilaian bisnis berbasis Flutter dengan backend Laravel untuk membantu
@@ -52,7 +59,15 @@
 	<div class="card" style="margin-top:12px;">
 		<p><strong>Download Aplikasi Inscore</strong></p>
 		<div class="btn-row">
-			<a class="primary-btn" href="{{ asset('downloads/inscore-latest.apk') }}" download>Download APK (Android)</a>
+			@php
+				$apkRel = 'downloads/inscore-latest.apk';
+				$apkExists = file_exists(public_path($apkRel));
+			@endphp
+			@if ($apkExists)
+				<a class="primary-btn" href="{{ asset($apkRel) }}" download>Download APK (Android)</a>
+			@else
+				<button class="disabled-btn" type="button" disabled>Segera Hadir</button>
+			@endif
 		</div>
 	</div>
 

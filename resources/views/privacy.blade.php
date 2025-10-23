@@ -30,7 +30,7 @@
     <h1>Kebijakan Privasi <span class="brand">Inscore</span></h1>
     <p class="muted">Terakhir diperbarui: {{ now()->toDateString() }}</p>
 
-    <p>Kebijakan Privasi ini menjelaskan bagaimana <strong>Inscore</strong> mengumpulkan, menggunakan, dan melindungi data pribadi Anda. Kebijakan ini disusun untuk memenuhi persyaratan <strong>Meta Developer</strong> dan hukum yang berlaku di Indonesia.</p>
+    <p>Kebijakan Privasi ini menjelaskan bagaimana <strong>Inscore</strong> mengumpulkan, menggunakan, dan melindungi data pribadi Anda.</p>
 
     <div class="section">
         <h2>1) Data yang Kami Kumpulkan</h2>
