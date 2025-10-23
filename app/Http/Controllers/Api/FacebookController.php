@@ -98,10 +98,10 @@ class FacebookController extends Controller
                 ->where('date', $today)
                 ->first();
 
-            $metric = $metric->toArray();
-            $metric['username'] = $account->name;
 
             if ($metric) {
+                $metric = $metric->toArray();
+                $metric['username'] = $account->name;
                 return api_success($metric, 'data metric facebook (cached)');
             }
 
