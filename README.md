@@ -1,61 +1,110 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# inscore
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+Backend API untuk aplikasi penilaian (scoring) performa akun media sosial Inscore. Sistem ini mengumpulkan metrik dari platform (mis. Instagram, Facebook), melakukan normalisasi dan pembobotan, lalu menghasilkan skor yang konsisten untuk digunakan di aplikasi klien.
 
-## About Laravel
+## Fitur Utama
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+-   Autentikasi & otorisasi (Laravel Sanctum)
+-   Manajemen pengguna dan akun media sosial (Instagram/Facebook)
+-   Pengambilan dan normalisasi metrik (ER, RR, Exposure per Post, dsb.)
+-   Perhitungan skor berbobot melalui `ScoreService`
+-   Home Screen API untuk ringkasan performa
+-   Reset kata sandi via email (temporary password) dengan template HTML kustom
+-   Halaman publik: Welcome, Connected, dan Kebijakan Privasi (sesuai pedoman Meta)
+-   Tombol unduh APK di halaman welcome yang aktif hanya bila file tersedia
+-   Antrian & penjadwalan (cron) siap dikonfigurasi untuk pekerjaan berkala
+-   Logging terstruktur dan konfigurasi melalui environment (.env)
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+## Program BEKUP & Tim
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+-   Program: BEKUP Create
+-   Kelompok: B25-PG007
+-   Anggota Kelompok:
+    -   BC25B017 — Ahmad Muqtafi
+    -   BC25B018 — Bintoro
+    -   BC25B069 — Muhammad Zulkifly Al Firdausy
+    -   BC25B072 — Farras Abdulaziz El-Fahd
 
-## Learning Laravel
+## Teknologi & Arsitektur Singkat
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework.
+-   Framework: Laravel 12 (PHP 8.2+)
+-   Autentikasi: Laravel Sanctum
+-   Basis data: MySQL/PostgreSQL (sesuaikan `.env`)
+-   Mailer: SMTP (konfigurasi di `.env`)
+-   Eloquent Models: `User`, `SocialAccount`, `Metric`, `Score`
+-   Services: `ScoreService`, `InstagramService`, `FacebookService`
+-   Infrastruktur: Dockerfile tersedia, cron (laravel-cron), supervisord
 
-You may also try the [Laravel Bootcamp](https://bootcamp.laravel.com), where you will be guided through building a modern Laravel application from scratch.
+## Cara Menjalankan (Windows PowerShell)
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+Prasyarat: PHP 8.2+, Composer, database (MySQL/PostgreSQL), dan ekstensi PHP standar.
 
-## Laravel Sponsors
+```powershell
+# 1) Instal dependensi
+composer install
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+# 2) Salin dan atur environment
+Copy-Item .env.example .env
 
-### Premium Partners
+# 3) Atur kredensial di .env (DB_*, MAIL_*, APP_URL)
 
-- **[Vehikl](https://vehikl.com)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Redberry](https://redberry.international/laravel-development)**
-- **[Active Logic](https://activelogic.com)**
+# 4) Generate app key
+php artisan key:generate
 
-## Contributing
+# 5) Migrasi database (tambahkan --seed bila ingin seeder berjalan)
+php artisan migrate
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+# 6) Jalankan server pengembangan
+php artisan serve
+```
 
-## Code of Conduct
+Opsional:
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+-   Jalankan queue: `php artisan queue:work`
+-   Atur cron/scheduler pada host untuk menjalankan `php artisan schedule:run` per menit.
 
-## Security Vulnerabilities
+## Endpoint Utama
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+Daftar lengkap endpoint tersedia di `routes/api.php`. Beberapa area fungsional:
 
-## License
+-   Autentikasi & Profil
+-   Home/Scoring ringkasan
+-   Manajemen akun sosial & metrik
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+Catatan: Kontrak respons mengikuti pola API yang konsisten (status code 2xx untuk sukses, 4xx untuk validasi/klien, dsb.).
+
+## Download Aplikasi
+
+Unduh APK Android terbaru melalui GitHub Releases:
+
+-   https://github.com/AZulUye/Inscore-App/releases/download/v1.0.0/app-release.apk
+
+Catatan: Tautan unduh juga tersedia di halaman Welcome aplikasi.
+
+## Halaman Publik
+
+-   Welcome: informasi singkat dan tautan unduh APK (GitHub Releases)
+-   Connected: status setelah koneksi sosial berhasil/gagal
+-   Kebijakan Privasi: tersedia di `/privacy`
+
+## Lokasi File Penting
+
+-   Model: `app/Models`
+-   Layanan: `app/Services`
+-   Controller: `app/Http/Controllers`
+-   View publik: `resources/views` (welcome, privacy, connected)
+-   Konfigurasi: `config/*.php`, `.env`
+-   Migrasi & Seeder: `database/migrations`, `database/seeders`
+
+## Kontribusi & Pengembangan Lanjutan
+
+-   Normalisasi metrik dan bobot skor dapat disesuaikan di `ScoreService`
+-   Batas (caps) metrik dapat dipindahkan ke file konfigurasi agar mudah di-tuning
+-   Dokumentasi API lebih lanjut dapat ditambahkan ke folder `docs/`
+
+---
+
+Opsional, kirimkan jika tersedia agar README diperbarui:
+
+-   Batch/angkatan program BEKUP Create
+-   Peran dan kontak tiap anggota

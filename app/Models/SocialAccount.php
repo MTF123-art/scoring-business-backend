@@ -29,4 +29,9 @@ class SocialAccount extends Model
     {
         return $this->expires_at !== null && $this->expires_at->lessThanOrEqualTo(now()->addDays($days));
     }
+
+    public function metrics()
+    {
+        return $this->hasMany(Metric::class, 'social_account_id');
+    }
 }

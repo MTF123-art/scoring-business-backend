@@ -5,9 +5,9 @@ namespace App\Http\Controllers\Api;
 use App\Http\Controllers\Controller;
 use App\Models\Metric;
 use App\Models\SocialAccount;
-use App\Services\InstagramService;
-use App\Services\ScoreService;
 use App\Models\Score;
+use App\Services\FacebookService;
+use App\Services\ScoreService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Support\Str;
@@ -15,27 +15,27 @@ use Illuminate\Support\Facades\Cache;
 use Carbon\Carbon;
 use Laravel\Socialite\Facades\Socialite;
 
-class InstagramController extends Controller
+class FacebookController extends Controller
 {
-    protected InstagramService $instagramService;
+    protected FacebookService $facebookService;
     protected ScoreService $scoreService;
 
-    public function __construct(InstagramService $instagramService, ScoreService $scoreService)
+    public function __construct(FacebookService $facebookService, ScoreService $scoreService)
     {
-        $this->instagramService = $instagramService;
+        $this->facebookService = $facebookService;
         $this->scoreService = $scoreService;
     }
 
-    public function redirectToInstagram(Request $request): JsonResponse
+    public function redirectToFacebook(Request $request): JsonResponse
     {
         try {
             $state = Str::random(32);
             Cache::put("oauth_state:{$state}", $request->user()->id, now()->addMinutes(10));
-            /** @var \Laravel\Socialite\Two\AbstractProvider $igDriver */
-            $igDriver = Socialite::driver('instagram');
-            $redirectUrl = $igDriver
+            /** @var \Laravel\Socialite\Two\AbstractProvider $fbDriver */
+            $fbDriver = Socialite::driver('facebook');
+            $redirectUrl = $fbDriver
                 ->stateless()
-                ->scopes(['instagram_business_basic', 'instagram_business_manage_insights'])
+                ->scopes(['read_insights', 'pages_show_list', 'pages_read_engagement', 'pages_manage_metadata', 'pages_read_user_content', 'pages_manage_posts', 'pages_manage_engagement'])
                 ->with(['state' => $state])
                 ->redirect()
                 ->getTargetUrl();
@@ -43,10 +43,10 @@ class InstagramController extends Controller
                 [
                     'url' => $redirectUrl,
                 ],
-                'url login instagram berhasil dibuat',
+                'url login facebook berhasil dibuat',
             );
         } catch (\Exception $e) {
-            return api_error('gagal membuat url login instagram', 500, $e->getMessage());
+            return api_error('gagal membuat url login facebook', 500, $e->getMessage());
         }
     }
 
@@ -59,20 +59,20 @@ class InstagramController extends Controller
                 return view('connected')->with(['message' => 'state tidak valid atau kadaluarsa']);
             }
             try {
-                /** @var \Laravel\Socialite\Two\AbstractProvider $igDriver */
-                $igDriver = Socialite::driver('instagram');
-                $instagramUser = $igDriver->stateless()->user();
+                /** @var \Laravel\Socialite\Two\AbstractProvider $fbDriver */
+                $fbDriver = Socialite::driver('facebook');
+                $facebookUser = $fbDriver->stateless()->user();
             } catch (\Exception $e) {
-                return view('connected')->with(['message' => 'Gagal mengambil data user instagram: ' . $e->getMessage()]);
+                return view('connected')->with(['message' => 'Gagal mengambil data user facebook: ' . $e->getMessage()]);
             }
             try {
-                $this->instagramService->connectAccount($userId, $instagramUser);
+                $this->facebookService->connectAccount($userId, $facebookUser);
             } catch (\Exception $e) {
-                return view('connected')->with(['message' => 'Gagal menyimpan akun instagram: ' . $e->getMessage()]);
+                return view('connected')->with(['message' => 'Gagal menyimpan akun facebook: ' . $e->getMessage()]);
             }
-            return view('connected')->with(['message' => 'Berhasil terhubung dengan akun instagram']);
+            return view('connected')->with(['message' => 'Berhasil terhubung dengan akun facebook']);
         } catch (\Exception $e) {
-            return view('connected')->with(['message' => 'Gagal terhubung dengan akun instagram: ' . $e->getMessage()]);
+            return view('connected')->with(['message' => 'Gagal terhubung dengan akun facebook: ' . $e->getMessage()]);
         }
     }
 
@@ -85,16 +85,16 @@ class InstagramController extends Controller
             }
 
             $account = SocialAccount::where('user_id', $user->id)
-                ->where('provider', 'instagram')
+                ->where('provider', 'facebook')
                 ->first();
             if (!$account) {
-                return api_error('akun instagram belum terhubung', 404);
+                return api_error('akun facebook belum terhubung', 404);
             }
 
             $today = now()->toDateString();
 
             $metric = Metric::where('social_account_id', $account->id)
-                ->where('provider', 'instagram')
+                ->where('provider', 'facebook')
                 ->where('date', $today)
                 ->first();
 
@@ -102,31 +102,31 @@ class InstagramController extends Controller
             if ($metric) {
                 $metric = $metric->toArray();
                 $metric['username'] = $account->name;
-                return api_success($metric, 'data metric instagram (cached)');
+                return api_success($metric, 'data metric facebook (cached)');
             }
 
             try {
-                $data = $this->instagramService->getMetrics($account);
+                $data = $this->facebookService->getMetrics($account);
             } catch (\Exception $e) {
-                return api_error('gagal mengambil metric instagram dari API', 400, $e->getMessage());
+                return api_error('gagal mengambil metric facebook dari API', 400, $e->getMessage());
             }
 
             try {
-                $metric = $this->instagramService->storeMetrics($account, $data, $today);
+                $metric = $this->facebookService->storeMetrics($account, $data, $today);
             } catch (\Exception $e) {
-                return api_error('gagal menyimpan metric instagram', 500, $e->getMessage());
+                return api_error('gagal menyimpan metric facebook', 500, $e->getMessage());
             }
 
             $metric = $metric->toArray();
             $metric['username'] = $account->name;
 
-            return api_success($metric, 'berhasil mengambil & menyimpan metric instagram');
+            return api_success($metric, 'berhasil mengambil & menyimpan metric facebook');
         } catch (\Exception $e) {
-            return api_error('terjadi kesalahan saat mengambil metric instagram', 500, $e->getMessage());
+            return api_error('terjadi kesalahan saat mengambil metric facebook', 500, $e->getMessage());
         }
     }
 
-    public function disconnectInstagram(Request $request)
+    public function disconnectFacebook(Request $request)
     {
         $user = $request->user();
         if (!$user) {
@@ -134,15 +134,15 @@ class InstagramController extends Controller
         }
 
         $account = SocialAccount::where('user_id', $user->id)
-            ->where('provider', 'instagram')
+            ->where('provider', 'facebook')
             ->first();
 
         if (!$account) {
-            return api_error('akun instagram belum terhubung', 404);
+            return api_error('akun facebook belum terhubung', 404);
         }
 
         $account->delete();
 
-        return api_success(null, 'akun instagram berhasil diputuskan');
+        return api_success(null, 'akun facebook berhasil diputuskan');
     }
 }
