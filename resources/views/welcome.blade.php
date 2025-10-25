@@ -59,15 +59,17 @@
 	<div class="card" style="margin-top:12px;">
 		<p><strong>Download Aplikasi Inscore</strong></p>
 		<div class="btn-row">
-			@php
-				$apkRel = 'downloads/inscore-latest.apk';
-				$apkExists = file_exists(public_path($apkRel));
-			@endphp
-			@if ($apkExists)
-				<a class="primary-btn" href="{{ asset($apkRel) }}" download>Download APK (Android)</a>
-			@else
-				<button class="disabled-btn" type="button" disabled>Segera Hadir</button>
-			@endif
+			<a class="link-btn" href="https://github.com/AZulUye/Inscore-App/releases/download/v1.0.0/app-release.apk" target="_blank" rel="noopener noreferrer">Unduh</a>
+		</div>
+	</div>
+
+	<div class="card" style="margin-top:12px;">
+		<p><strong>Dokumen Panduan Penggunaan</strong></p>
+		<p>
+			Pelajari cara menggunakan aplikasi Inscore melalui panduan resmi berikut.
+		</p>
+		<div class="btn-row">
+			<a class="link-btn" href="https://docs.google.com/document/d/1WXQIEKAug-iAzK3mYjC7rSYDHO63mplrGIBQ3Wfybqg/edit?usp=sharing" target="_blank" rel="noopener noreferrer">Buka Panduan</a>
 		</div>
 	</div>
 
