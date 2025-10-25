@@ -103,8 +103,3 @@ Catatan: Tautan unduh juga tersedia di halaman Welcome aplikasi.
 -   Dokumentasi API lebih lanjut dapat ditambahkan ke folder `docs/`
 
 ---
-
-Opsional, kirimkan jika tersedia agar README diperbarui:
-
--   Batch/angkatan program BEKUP Create
--   Peran dan kontak tiap anggota
